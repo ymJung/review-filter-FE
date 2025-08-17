@@ -53,9 +53,9 @@
 |number|number|text|text|
 
 * 로드맵테이블
-|id|강의id|next강의id|공개상태|
-|---|---|---|
-|number|number|number|text|
+|id|로드맵소개|작성자id|강의id|next강의id|공개상태|로드맵소개|
+|---|---|---|---|---|
+|number|text|number|number|number|text|
 
 
 * 공개상태
@@ -71,6 +71,7 @@
 
 |권한명|코드|설명|분류|
 |---|---|---|---|
+|관리자|ADMIN|관리자|
 |미로그인|NOT_ACCESS|로그인하지 않은 사용자|
 |로그인+미인증|LOGIN_NOT_AUTH|로그인은 했지만 특별한액션없음|
 |로그인+인증|AUTH_LOGIN|필수 액션을 한 상태 (1개이상 리뷰작성)|
@@ -107,14 +108,8 @@
         - 리뷰 전체 노출
     * BLOCKED_LOGIN
         - 아무것도 보이지 않음
-* 리뷰 조회
-    - 리뷰 상세 조회
-    * 댓글 달기
-
-* 학습 로드맵 조회
-    - 유저/관리자가 작성한 학습 로드맵
-* 글쓰기 
-    1. 리뷰 작성
+    
+    * 리뷰 작성
         * 강의 플랫폼 에서 수강 완료를 인증한 강의를 리뷰함
             1. 강의 정보 입력
             2. 리뷰 내용 작성
@@ -122,7 +117,14 @@
                 - 저장소는? 
                 - 확장자는 ?
                 - 크기는 ? 
-    2. 로드맵 작성
+    * 리뷰 상세 조회
+        - 리뷰 상세 조회
+        * 댓글 달기
+
+* 학습 로드맵
+    * 조회
+        - 유저/관리자가 작성한 학습 로드맵
+    * 로드맵 작성
         * 강의 하나를 들으면 다음 어떤걸 들으면 좋을지 로드맵을 작성
             1. 강의 정보 입력 , 다음 강의 정보를 입력
 
@@ -136,16 +138,64 @@
         * 내 닉네임
         * 현재 등급
 
+* 어드민 관리
+    * 유저 블락 관리하기
+    * 리뷰글 블락 관리하기
+    * 로드맵 블락 관리하기
+
+
 ### API 설계
 > 기본 구조는 json 메시지 포맷의  API 통신으로 이루어진다.
 
 * 메인
-    * request:  GET /
+    * GET /
+    * response (미로그인)
+        * 가려진 강의 목록
+        * 인기카테고리
+        * 최근 리뷰요약
+    * response (로그인)
+        * 전체 강의 목록
+        * 인기카테고리
+        * 최근 리뷰요약
+
+* 로그인
+    * POST /login
+
+* 강의리뷰
+    * GET /reviews
+        * 리뷰 목록
+    * GET /reviews/{review-id}
+        * 리뷰 상세
+    * POST /reviews
+        * 리뷰 작성
+
+* 학습 로드맵
+    * GET /roadmaps
+        * 로드맵 목록
+    * GET /roadmaps/{roadmap-id}
+        * 로드맵 상세 조회
+    * POST /roadmaps
+        * 로드맵 작성
+* 관리자모드
+    * GET /admin/reviews
+        * 리뷰 목록 조회
+    * POST /admin/reviews/{review-id}
+        * 리뷰 관리
+    * GET /admin/roadmaps
+        * 로드맵 목록 조회
+    * POST /admin/roadmaps/{roadmap-id}
+        * 로드맵 관리
+    * GET /admin/users
+        * 유저 목록 조회
+    * POST /admin/users/{user-id}
+        * 유저 관리
 
 
 ## 아키텍쳐
 * FE: TS (Typescript)
 * Next.js
-* DB: Firebase-firestore
+* Firebase
+    * DB: firestore
+    * storage : Cloud Storage for Firebase
 * LLM API : open-ai API
 * AUTH : social (kakao/naver)
