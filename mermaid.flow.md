@@ -1,3 +1,4 @@
+```mermaid
 flowchart TD
     START([사용자 접속]) --> LOGIN{로그인 상태?}
     
@@ -38,3 +39,4 @@ flowchart TD
     class GUEST,NOT_AUTH,AUTH,PREMIUM,BLOCKED userClass
     class GUEST_ACCESS,LIMITED,FULL_ACCESS,NO_ACCESS actionClass
     class ADMIN,ADMIN_ACCESS,MANAGE_USERS,MANAGE_REVIEWS,MANAGE_ROADMAPS adminClass
+```

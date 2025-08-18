@@ -1,3 +1,4 @@
+```mermaid
 graph TB
     %% 사용자 레이어
     subgraph "사용자"
@@ -106,3 +107,5 @@ graph TB
     class AUTH,KAKAO,NAVER authClass
     class FS,STORAGE,OPENAI backendClass
     class T1,T2,T3,T4,T5,T6 dbClass
+
+```
