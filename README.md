@@ -29,21 +29,23 @@
 ## 데이터 구조
 * 강의테이블
 
-|id|강의플랫폼|강의명|강사|카테고리|조회수|
+|id|강의플랫폼|강의명|강사|카테고리|조회수| 
 |---|---|---|---|---|---|
 |number|text|text|text|text|number|
-
+|pk|optional||optional|optional|0|
 * 유저테이블
 
 |id|social|uuid|닉네임|권한|
 |---|---|---|---|---|
 |number|text|text|text|text|
+|pk|uk|uk|||
 
 * 유저강의리뷰테이블
 
 |id|리뷰id|유저id|리뷰내용|점수|공개상태|작성일시|수강시기|좋았던점|아쉬웠던점|수강후 변화,적용사례|추천대상|
 |---|---|---|---|---|---|---|---|---|---|---|---|
 |number|number|number|text|double|text|datetime|datetime|text|text|text|text|
+|pk|fk|fk|||||optional|optional|optional|optional|optional|
 
 
 * 유저강의리뷰인증파일테이블
@@ -51,19 +53,21 @@
 |id|유저강의리뷰id|저장소url|
 |---|---|---|
 |number|number|text|
+|pk|fk||
 
 * 댓글테이블
 
 |id|리뷰id|내용|공개상태|
 |---|---|---|---|
 |number|number|text|text|
+|pk|fk|||
 
 * 로드맵테이블
 
 |id|로드맵소개|작성자id|강의id|next강의id|공개상태|로드맵소개|
 |---|---|---|---|---|---|---|
 |number|text|number|number|number|text|text|
-
+|pk||fk|fk|optional||optional|
 
 * 공개상태
 
@@ -229,157 +233,5 @@ npm start
 
 
 ### 시스템 아키텍처 다이어그램
-```mermaid
-graph TB
-    %% 사용자 레이어
-    subgraph "사용자"
-        U1[일반 사용자]
-        U2[로그인 사용자]
-        U3[인증 사용자]
-        U4[프리미엄 사용자]
-        U5[관리자]
-    end
-
-    %% 프론트엔드 레이어
-    subgraph "Frontend (Next.js)"
-        FE[Next.js App]
-        subgraph "Pages"
-            P1[메인 페이지]
-            P2[리뷰 목록/상세]
-            P3[로드맵 목록/상세]
-            P4[글쓰기]
-            P5[마이페이지]
-            P6[관리자]
-        end
-        
-        subgraph "Components"
-            C1[인증 컴포넌트]
-            C2[리뷰 컴포넌트]
-            C3[이미지 업로드]
-            C4[권한 체크]
-        end
-    end
-
-    %% 인증 서비스
-    subgraph "Authentication"
-        AUTH[Firebase Auth]
-        KAKAO[Kakao Login]
-        NAVER[Naver Login]
-    end
-
-    %% 백엔드 서비스
-    subgraph "Backend Services"
-        subgraph "Firebase"
-            FS[Firestore DB]
-            STORAGE[Cloud Storage]
-        end
-        
-        subgraph "External APIs"
-            OPENAI[OpenAI API]
-        end
-    end
-
-    %% 데이터 플로우
-    U1 --> FE
-    U2 --> FE
-    U3 --> FE
-    U4 --> FE
-    U5 --> FE
-
-    FE --> P1
-    FE --> P2
-    FE --> P3
-    FE --> P4
-    FE --> P5
-    FE --> P6
-
-    C1 --> AUTH
-    AUTH --> KAKAO
-    AUTH --> NAVER
-
-    C2 --> FS
-    C3 --> STORAGE
-    C4 --> FS
-
-    P1 --> OPENAI
-    P2 --> FS
-    P3 --> FS
-    P4 --> FS
-    P4 --> STORAGE
-    P5 --> FS
-    P6 --> FS
-
-    %% 데이터베이스 구조
-    subgraph "Database Schema"
-        T1[강의 테이블]
-        T2[유저 테이블]
-        T3[리뷰 테이블]
-        T4[인증파일 테이블]
-        T5[댓글 테이블]
-        T6[로드맵 테이블]
-    end
-
-    FS --> T1
-    FS --> T2
-    FS --> T3
-    FS --> T4
-    FS --> T5
-    FS --> T6
-
-    %% 스타일링
-    classDef userClass fill:#e1f5fe
-    classDef frontendClass fill:#f3e5f5
-    classDef authClass fill:#fff3e0
-    classDef backendClass fill:#e8f5e8
-    classDef dbClass fill:#fce4ec
-
-    class U1,U2,U3,U4,U5 userClass
-    class FE,P1,P2,P3,P4,P5,P6,C1,C2,C3,C4 frontendClass
-    class AUTH,KAKAO,NAVER authClass
-    class FS,STORAGE,OPENAI backendClass
-    class T1,T2,T3,T4,T5,T6 dbClass
-```
-
-### 사용자 플로우 다이어그램
-```mermaid
-flowchart TD
-    START([사용자 접속]) --> LOGIN{로그인 상태?}
-    
-    LOGIN -->|No| GUEST[미로그인 사용자]
-    LOGIN -->|Yes| CHECK_AUTH{인증 상태 확인}
-    
-    GUEST --> GUEST_ACCESS[제한된 리뷰 1개만 조회]
-    
-    CHECK_AUTH --> NOT_AUTH[로그인+미인증]
-    CHECK_AUTH --> AUTH[로그인+인증]
-    CHECK_AUTH --> PREMIUM[로그인+프리미엄]
-    CHECK_AUTH --> BLOCKED[차단된 사용자]
-    CHECK_AUTH --> ADMIN[관리자]
-    
-    NOT_AUTH --> LIMITED[제한된 리뷰 1개만 조회]
-    AUTH --> FULL_ACCESS[전체 리뷰 조회 가능]
-    PREMIUM --> FULL_ACCESS
-    BLOCKED --> NO_ACCESS[접근 차단]
-    ADMIN --> ADMIN_ACCESS[관리자 기능 접근]
-    
-    FULL_ACCESS --> WRITE_REVIEW{리뷰 작성?}
-    WRITE_REVIEW -->|Yes| UPLOAD_CERT[결제 인증 이미지 업로드]
-    UPLOAD_CERT --> REVIEW_SUBMIT[리뷰 제출]
-    REVIEW_SUBMIT --> MODERATION[검수 대기]
-    MODERATION --> APPROVED[승인 후 공개]
-    
-    ADMIN_ACCESS --> MANAGE_USERS[사용자 관리]
-    ADMIN_ACCESS --> MANAGE_REVIEWS[리뷰 검수]
-    ADMIN_ACCESS --> MANAGE_ROADMAPS[로드맵 관리]
-
-    %% 스타일링
-    classDef startClass fill:#4caf50,color:#fff
-    classDef userClass fill:#2196f3,color:#fff
-    classDef actionClass fill:#ff9800,color:#fff
-    classDef adminClass fill:#f44336,color:#fff
-    
-    class START startClass
-    class GUEST,NOT_AUTH,AUTH,PREMIUM,BLOCKED userClass
-    class GUEST_ACCESS,LIMITED,FULL_ACCESS,NO_ACCESS actionClass
-    class ADMIN,ADMIN_ACCESS,MANAGE_USERS,MANAGE_REVIEWS,MANAGE_ROADMAPS adminClass
-```
+- [시스템 아키텍처](./mermaid.architecture.md)
+- [사용자 플로우](./mermaid.flow.md)
