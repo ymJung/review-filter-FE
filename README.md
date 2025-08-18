@@ -4,6 +4,8 @@
 * 인증된 사용자에게는 리뷰, 광고없는 모드를 제공한다.
 
 
+
+
 ## 기능
 * 회원가입
     * 소셜 로그인(카카오/네이버)
@@ -39,12 +41,16 @@
 
 * 유저강의리뷰테이블
 
-|id|리뷰id|유저id|리뷰내용|점수|공개상태|작성일시|
-|---|---|---|---|---|---|
-|number|number|number|text|double|text|datetime|
+|id|리뷰id|유저id|리뷰내용|점수|공개상태|작성일시|수강시기|좋았던점|아쉬웠던점|수강후 변화,적용사례|추천대상|
+|---|---|---|---|---|---|---|---|---|---|---|---|
+|number|number|number|text|double|text|datetime|datetime|text|text|text|text|
+
 
 * 유저강의리뷰인증파일테이블
+
 |id|유저강의리뷰id|저장소url|
+|---|---|---|
+|number|number|text|
 
 * 댓글테이블
 
@@ -53,9 +59,10 @@
 |number|number|text|text|
 
 * 로드맵테이블
+
 |id|로드맵소개|작성자id|강의id|next강의id|공개상태|로드맵소개|
-|---|---|---|---|---|
-|number|text|number|number|number|text|
+|---|---|---|---|---|---|---|
+|number|text|number|number|number|text|text|
 
 
 * 공개상태
@@ -114,9 +121,9 @@
             1. 강의 정보 입력
             2. 리뷰 내용 작성
             3. 결제 인증 이미지 업로드 필수 
-                - 저장소는? 
-                - 확장자는 ?
-                - 크기는 ? 
+                - 저장소 - 로컬스토리지 활용. 검수가 끝나면 삭제
+                - 확장자는 - 이미지 - JPEG ,JPG , PNG, GIF, HEIC
+                - 크기는 5메가. 업로드 되면 압축하여 이미지 분석한다.
     * 리뷰 상세 조회
         - 리뷰 상세 조회
         * 댓글 달기
@@ -190,12 +197,30 @@
     * POST /admin/users/{user-id}
         * 유저 관리
 
+## 외부 서비스 연동
+* Firebase: 인증, 데이터베이스, 스토리지
+* Kakao Developers: 소셜 로그인
+* Naver Developers: 소셜 로그인
+* OpenAI: 리뷰 요약 생성
+
 
 ## 아키텍쳐
-* FE: TS (Typescript)
-* Next.js
-* Firebase
-    * DB: firestore
-    * storage : Cloud Storage for Firebase
-* LLM API : open-ai API
-* AUTH : social (kakao/naver)
+* **Frontend**: TypeScript, Next.js 14 (App Router)
+* **Database**: Firebase Firestore
+* **Storage**: Cloud Storage for Firebase
+* **Authentication**: 소셜 로그인 (Kakao/Naver)
+* **AI/ML**: OpenAI API (리뷰 요약)
+* **Hosting**: Vercel (또는 Firebase Hosting)
+
+
+## 빌드
+```sh
+# 의존성 설치
+npm install
+# 개발 서버 실행
+npm run dev
+# 빌드
+npm run build
+# 프로덕션 실행
+npm start
+```
