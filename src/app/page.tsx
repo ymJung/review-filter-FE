@@ -2,6 +2,7 @@
 
 import { Layout, Container } from '@/components/layout';
 import { Card, CardContent, Button } from '@/components/ui';
+import { CategoryStatsComponent } from '@/components/course';
 import { useAuth } from '@/components/auth/AuthProvider';
 import Link from 'next/link';
 
@@ -102,6 +103,28 @@ export default function Home() {
                 </p>
               </CardContent>
             </Card>
+          </div>
+        </Container>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-20 bg-gray-50">
+        <Container>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              인기 카테고리
+            </h2>
+            <p className="text-lg text-gray-600">
+              최근 리뷰가 많이 작성된 인기 카테고리를 확인해보세요.
+            </p>
+          </div>
+          
+          <div className="max-w-2xl mx-auto">
+            <CategoryStatsComponent 
+              source="reviews"
+              limit={8}
+              title="인기 카테고리 TOP 8"
+            />
           </div>
         </Container>
       </section>
