@@ -2,3 +2,4 @@
 export * from './userService';
 export * from './accessControlService';
 export * from './courseService';
+export * from './reviewService';
