@@ -223,7 +223,7 @@ npm start
 ### 기술 스택
 * **Frontend**: TypeScript, Next.js 14 (App Router)
 * **Database**: Firebase Firestore
-* **Storage**: Cloud Storage for Firebase
+* **Storage**: 로컬스토리지 사용
 * **Authentication**: 소셜 로그인 (Kakao/Naver)
 * **AI/ML**: OpenAI API (리뷰 요약)
 * **Hosting**: Vercel (또는 Firebase Hosting)
@@ -235,3 +235,36 @@ npm start
 ### 시스템 아키텍처 다이어그램
 - [시스템 아키텍처](./mermaid.architecture.md)
 - [사용자 플로우](./mermaid.flow.md)
+
+## 개발 진행 상황
+
+이 프로젝트는 체계적인 개발을 위해 Spec 기반 개발 방법론을 사용합니다.
+
+### 📋 개발 문서
+- [요구사항 문서](./.kiro/specs/review-platform-implementation/requirements.md) - 기능별 상세 요구사항 및 승인 기준
+- [설계 문서](./.kiro/specs/review-platform-implementation/design.md) - 시스템 아키텍처 및 컴포넌트 설계
+- [구현 작업 목록](./.kiro/specs/review-platform-implementation/tasks.md) - 23개 단계별 구현 체크리스트
+
+### 🚀 구현 단계
+구현은 다음 순서로 진행됩니다:
+
+1. **기반 설정** (1-2단계): 프로젝트 초기 설정 및 타입 정의
+2. **인증 시스템** (3-4단계): Firebase 인증 및 사용자 관리
+3. **기본 UI** (5-6단계): 레이아웃 및 권한 제어
+4. **핵심 기능** (7-12단계): 리뷰, 댓글, 로드맵 기능
+5. **고급 기능** (13-15단계): AI 요약, 관리자 기능
+6. **품질 보장** (16-21단계): 보안, 성능, 테스트
+7. **배포 및 운영** (22-23단계): 배포 설정 및 최종 검증
+
+### 📊 현재 진행률
+- [x] 기반 설정 (1/2)
+- [ ] 인증 시스템 (0/2) 
+- [ ] 기본 UI (0/2)
+- [ ] 핵심 기능 (0/6)
+- [ ] 고급 기능 (0/3)
+- [ ] 품질 보장 (0/6)
+- [ ] 배포 및 운영 (0/2)
+
+**전체 진행률: 1/23 (4.3%)**
+
+각 작업을 완료할 때마다 위 체크리스트를 업데이트하여 진행 상황을 추적할 수 있습니다.
