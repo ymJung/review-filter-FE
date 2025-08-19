@@ -44,6 +44,7 @@ export const CONTENT_STATUS = {
 
 // Social providers
 export const SOCIAL_PROVIDERS = {
+  GOOGLE: 'google',
   KAKAO: 'kakao',
   NAVER: 'naver',
 } as const;

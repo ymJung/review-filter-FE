@@ -7,7 +7,7 @@ export type UserRole =
   | 'BLOCKED_LOGIN' 
   | 'ADMIN';
 
-export type SocialProvider = 'kakao' | 'naver';
+export type SocialProvider = 'google' | 'kakao' | 'naver';
 
 export interface User {
   id: string;
