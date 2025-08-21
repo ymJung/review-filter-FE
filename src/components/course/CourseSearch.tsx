@@ -163,7 +163,7 @@ export const CourseSearch: React.FC<CourseSearchProps> = ({
                   onClick={handleCreateCourse}
                   className="mt-2"
                 >
-                  "{query}" 강의 추가하기
+                  &quot;{query}&quot; 강의 추가하기
                 </Button>
               )}
             </div>
@@ -219,7 +219,7 @@ export const CourseSearch: React.FC<CourseSearchProps> = ({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     <span className="text-sm font-medium">
-                      "{query}" 강의 추가하기
+                      &quot;{query}&quot; 강의 추가하기
                     </span>
                   </div>
                 </div>

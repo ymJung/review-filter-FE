@@ -5,14 +5,8 @@ import { courseConverter } from '@/lib/firebase/converters';
 import { Course, ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
 // GET /api/courses/[id] - Get specific course and increment view count
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
 
@@ -52,7 +46,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 // PUT /api/courses/[id] - Update course (admin only)
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {

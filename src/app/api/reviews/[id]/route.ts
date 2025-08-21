@@ -6,14 +6,8 @@ import { reviewConverter, courseConverter, userConverter } from '@/lib/firebase/
 import { Review, Course, User, ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
 // GET /api/reviews/[id] - Get specific review with course and user info
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
 
@@ -97,7 +91,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 // PUT /api/reviews/[id] - Update review (owner or admin only)
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -191,7 +185,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 // DELETE /api/reviews/[id] - Delete review (owner or admin only)
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {

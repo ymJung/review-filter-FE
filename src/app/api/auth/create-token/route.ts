@@ -5,20 +5,31 @@ import { SocialProvider } from '@/types';
 import { generateRandomNickname } from '@/lib/utils';
 
 // Initialize Firebase Admin SDK
-if (getApps().length === 0) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
+if (getApps().length === 0 && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
+  try {
+    initializeApp({
+      credential: cert({
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      }),
+    });
+  } catch (error) {
+    console.warn('Firebase Admin initialization failed:', error);
+  }
 }
-
-const auth = getAuth();
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Firebase Admin is properly initialized
+    if (getApps().length === 0) {
+      return NextResponse.json(
+        { error: 'Firebase Admin not configured' },
+        { status: 500 }
+      );
+    }
+
+    const auth = getAuth();
     const { provider, socialData } = await request.json();
 
     if (!provider || !socialData) {
