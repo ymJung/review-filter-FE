@@ -3,6 +3,7 @@
 import { Layout, Container } from '@/components/layout';
 import { Card, CardContent, Button } from '@/components/ui';
 import { CategoryStatsComponent } from '@/components/course';
+import { ReviewSummary } from '@/components/summary/ReviewSummary';
 import { useAuth } from '@/components/auth/AuthProvider';
 import Link from 'next/link';
 
@@ -103,6 +104,24 @@ export default function Home() {
                 </p>
               </CardContent>
             </Card>
+          </div>
+        </Container>
+      </section>
+
+      {/* AI Summary Section */}
+      <section className="py-20 bg-white">
+        <Container>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              🤖 AI 리뷰 인사이트
+            </h2>
+            <p className="text-lg text-gray-600">
+              최신 리뷰들을 AI가 분석하여 핵심 인사이트를 제공합니다.
+            </p>
+          </div>
+          
+          <div className="max-w-4xl mx-auto">
+            <ReviewSummary />
           </div>
         </Container>
       </section>
