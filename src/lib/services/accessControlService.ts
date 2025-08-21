@@ -111,7 +111,7 @@ export const filterRoadmapsForUser = (
     case ContentAccessLevel.PREMIUM:
       // Show all approved roadmaps + user's own roadmaps
       return roadmaps.filter(roadmap => 
-        roadmap.status === 'APPROVED' || roadmap.authorId === userId
+        roadmap.status === 'APPROVED' || roadmap.userId === userId
       );
     
     default:

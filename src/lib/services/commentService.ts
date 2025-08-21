@@ -8,11 +8,11 @@ export class CommentService {
     try {
       const response = await fetch(`${API_BASE}?reviewId=${reviewId}&limit=${limit}`);
       const data: ApiResponse<Comment[]> = await response.json();
-      
+
       if (!data.success) {
         throw new Error(data.error?.message || 'Failed to fetch comments');
       }
-      
+
       return data.data || [];
     } catch (error) {
       console.error('Error fetching comments:', error);
@@ -36,11 +36,11 @@ export class CommentService {
       });
 
       const data: ApiResponse<Comment> = await response.json();
-      
+
       if (!data.success || !data.data) {
         throw new Error(data.error?.message || 'Failed to create comment');
       }
-      
+
       return data.data;
     } catch (error) {
       console.error('Error creating comment:', error);
@@ -50,8 +50,8 @@ export class CommentService {
 
   // Update a comment
   static async updateComment(
-    commentId: string, 
-    updates: { content?: string; status?: string }, 
+    commentId: string,
+    updates: { content?: string; status?: string },
     token: string
   ): Promise<Comment> {
     try {
@@ -65,11 +65,11 @@ export class CommentService {
       });
 
       const data: ApiResponse<Comment> = await response.json();
-      
+
       if (!data.success || !data.data) {
         throw new Error(data.error?.message || 'Failed to update comment');
       }
-      
+
       return data.data;
     } catch (error) {
       console.error('Error updating comment:', error);
@@ -88,7 +88,7 @@ export class CommentService {
       });
 
       const data: ApiResponse<{ success: boolean }> = await response.json();
-      
+
       if (!data.success) {
         throw new Error(data.error?.message || 'Failed to delete comment');
       }
@@ -103,11 +103,11 @@ export class CommentService {
     try {
       const response = await fetch(`${API_BASE}/${commentId}`);
       const data: ApiResponse<Comment> = await response.json();
-      
+
       if (!data.success || !data.data) {
         throw new Error(data.error?.message || 'Failed to fetch comment');
       }
-      
+
       return data.data;
     } catch (error) {
       console.error('Error fetching comment:', error);

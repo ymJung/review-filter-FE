@@ -77,10 +77,14 @@ export interface Roadmap {
   id: string;
   title: string;
   description: string;
-  authorId: string;
-  courseId: string;
-  nextCourseId?: string;
+  courseTitle: string;
+  coursePlatform: string;
+  nextCourseTitle?: string;
+  nextCoursePlatform?: string;
+  category?: string;
+  userId: string;
   status: RoadmapStatus;
+  viewCount: number;
   createdAt: Date;
 }
 
