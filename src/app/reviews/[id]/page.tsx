@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Layout, Container } from '@/components/layout';
 import { ReviewCard } from '@/components/review/ReviewCard';
+import { CommentSection } from '@/components/comment/CommentSection';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { LoadingPage } from '@/components/ui/Loading';
@@ -202,15 +203,14 @@ export default function ReviewDetailPage() {
           </div>
         </div>
 
-        {/* Comments Section (placeholder for future implementation) */}
-        <div className="mt-12 max-w-4xl mx-auto">
-          <div className="border-t border-gray-200 pt-8">
-            <h3 className="text-lg font-semibold mb-4">댓글</h3>
-            <div className="text-center py-8 text-gray-500">
-              <p>댓글 기능은 곧 추가될 예정입니다.</p>
+        {/* Comments Section */}
+        {canViewFullContent && (
+          <div className="mt-12 max-w-4xl mx-auto">
+            <div className="border-t border-gray-200 pt-8">
+              <CommentSection reviewId={reviewId} />
             </div>
           </div>
-        </div>
+        )}
       </Container>
     </Layout>
   );

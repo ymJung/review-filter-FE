@@ -99,6 +99,7 @@ export const commentConverter: FirestoreDataConverter<Comment> = {
   toFirestore: (comment: Comment) => ({
     ...comment,
     createdAt: dateToTimestamp(comment.createdAt),
+    updatedAt: dateToTimestamp(comment.updatedAt),
   }),
   fromFirestore: (snapshot: QueryDocumentSnapshot, options: SnapshotOptions): Comment => {
     const data = snapshot.data(options);
@@ -106,6 +107,7 @@ export const commentConverter: FirestoreDataConverter<Comment> = {
       ...data,
       id: snapshot.id,
       createdAt: timestampToDate(data.createdAt),
+      updatedAt: timestampToDate(data.updatedAt),
     } as Comment;
   }
 };

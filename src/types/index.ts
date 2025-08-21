@@ -67,6 +67,7 @@ export interface Comment {
   content: string;
   status: CommentStatus;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 // Roadmap Types
