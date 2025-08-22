@@ -282,7 +282,10 @@ export function RoadmapForm({
           type="submit"
           disabled={submitting}
         >
-          {submitting ? '등록 중...' : '로드맵 등록'}
+          {submitting 
+            ? (initialData ? '수정 중...' : '등록 중...') 
+            : (initialData ? '로드맵 수정' : '로드맵 등록')
+          }
         </Button>
       </div>
     </form>

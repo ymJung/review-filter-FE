@@ -93,10 +93,13 @@
   - RoadmapCard에서 실제 상세 페이지로 이동 기능 구현 ✅
   - _Requirements: 6.3_
 
-- [ ] 11.4. 로드맵 수정 기능 구현
-  - 로드맵 상세 페이지에 수정 버튼 추가 (권한 있는 사용자만)
-  - 기존 RoadmapForm을 수정 모드로 활용
-  - /write/roadmap?edit=[id] 경로로 수정 페이지 구현
+- [x] 11.4. 로드맵 수정 기능 구현
+  - 로드맵 상세 페이지에 수정 버튼 추가 (권한 있는 사용자만) ✅
+  - 기존 RoadmapForm을 수정 모드로 활용 ✅
+  - /write/roadmap?edit=[id] 경로로 수정 페이지 구현 ✅
+  - 권한 검증 로직 추가 (작성자 또는 관리자만 수정 가능) ✅
+  - 수정 시 상태를 PENDING으로 변경하여 재검수 요청 ✅
+  - Suspense 경계를 사용한 안전한 useSearchParams 처리 ✅
   - _Requirements: 6.4_
 
 - [ ] 11.5. 로드맵 삭제 기능 구현
