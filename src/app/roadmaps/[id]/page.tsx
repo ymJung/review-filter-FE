@@ -36,6 +36,8 @@ export default function RoadmapDetailPage() {
   const [roadmap, setRoadmap] = useState<RoadmapDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const roadmapId = params.id as string;
 
@@ -66,6 +68,33 @@ export default function RoadmapDetailPage() {
 
   const handleEdit = () => {
     router.push(`/write/roadmap?edit=${roadmapId}`);
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!user || !firebaseUser || !roadmap) return;
+
+    try {
+      setDeleting(true);
+      const token = await firebaseUser.getIdToken();
+      await RoadmapService.deleteRoadmap(roadmapId, token);
+      
+      alert('로드맵이 성공적으로 삭제되었습니다.');
+      router.push('/roadmaps');
+    } catch (error: any) {
+      console.error('Error deleting roadmap:', error);
+      alert(error.message || '로드맵 삭제에 실패했습니다.');
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteDialog(false);
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -153,9 +182,20 @@ export default function RoadmapDetailPage() {
                 {getStatusText(roadmap.status)}
               </Badge>
               {canEdit && (
-                <Button onClick={handleEdit} size="sm">
-                  수정
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={handleEdit} size="sm">
+                    수정
+                  </Button>
+                  <Button 
+                    onClick={handleDeleteClick} 
+                    size="sm" 
+                    variant="outline"
+                    className="text-red-600 hover:text-red-700 hover:border-red-300"
+                    disabled={deleting}
+                  >
+                    삭제
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -212,6 +252,39 @@ export default function RoadmapDetailPage() {
           )}
         </div>
       </Card>
+
+      {/* 삭제 확인 다이얼로그 */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              로드맵 삭제 확인
+            </h3>
+            <p className="text-gray-600 mb-6">
+              정말로 이 로드맵을 삭제하시겠습니까?<br />
+              <span className="font-medium">&quot;{roadmap?.title}&quot;</span><br />
+              <span className="text-sm text-red-600">이 작업은 되돌릴 수 없습니다.</span>
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                onClick={handleDeleteCancel}
+                variant="outline"
+                disabled={deleting}
+              >
+                취소
+              </Button>
+              <Button
+                onClick={handleDeleteConfirm}
+                variant="outline"
+                className="text-red-600 hover:text-red-700 hover:border-red-300 hover:bg-red-50"
+                disabled={deleting}
+              >
+                {deleting ? '삭제 중...' : '삭제'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
