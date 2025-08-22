@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface RoadmapCardProps {
   roadmap: Roadmap & {
@@ -28,11 +29,17 @@ export function RoadmapCard({
   onDelete,
   className = '' 
 }: RoadmapCardProps) {
+  const router = useRouter();
+
   const formatDate = (date: Date) => {
     return formatDistanceToNow(date, { 
       addSuffix: true, 
       locale: ko 
     });
+  };
+
+  const handleViewDetails = () => {
+    router.push(`/roadmaps/${roadmap.id}`);
   };
 
   const getStatusBadge = (status: string) => {
@@ -56,7 +63,7 @@ export function RoadmapCard({
           <div className="flex items-center gap-2 mb-2">
             <h3 
               className="text-lg font-semibold text-gray-900 hover:text-blue-600 cursor-pointer"
-              onClick={() => alert(`로드맵 상세 페이지 (ID: ${roadmap.id})\n\nTask 11.3에서 구현될 예정입니다.`)}
+              onClick={handleViewDetails}
             >
               {roadmap.title}
             </h3>
@@ -150,7 +157,7 @@ export function RoadmapCard({
           variant="ghost" 
           size="sm" 
           className="w-full"
-          onClick={() => alert(`로드맵 상세 페이지 (ID: ${roadmap.id})\n\nTask 11.3에서 구현될 예정입니다.`)}
+          onClick={handleViewDetails}
         >
           자세히 보기 →
         </Button>
