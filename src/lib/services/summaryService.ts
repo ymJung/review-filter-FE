@@ -50,6 +50,17 @@ export class SummaryService {
     }
   }
 
+  // Get most recent summary
+  static async getRecentSummary(): Promise<ReviewSummary | null> {
+    try {
+      const summaries = await this.getCachedSummaries(1);
+      return summaries.length > 0 ? summaries[0] : null;
+    } catch (error) {
+      console.error('Error fetching recent summary:', error);
+      throw new Error('최근 요약이 없습니다.');
+    }
+  }
+
   // Get specific summary
   static async getSummary(summaryId: string): Promise<ReviewSummary> {
     try {

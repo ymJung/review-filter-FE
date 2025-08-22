@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -16,17 +16,44 @@ interface ReviewSummaryProps {
   category?: string;
   platform?: string;
   className?: string;
+  autoLoad?: boolean; // 자동으로 최근 요약을 로드할지 여부
 }
 
 export function ReviewSummary({ 
   initialSummary, 
   category, 
   platform, 
-  className = '' 
+  className = '',
+  autoLoad = false
 }: ReviewSummaryProps) {
   const [summary, setSummary] = useState<ReviewSummaryType | null>(initialSummary || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 컴포넌트 마운트 시 최근 요약 자동 로드
+  useEffect(() => {
+    if (autoLoad && !initialSummary) {
+      loadRecentSummary();
+    }
+  }, [autoLoad, initialSummary]);
+
+  const loadRecentSummary = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const recentSummary = await SummaryService.getRecentSummary();
+      setSummary(recentSummary);
+    } catch (error: any) {
+      console.error('Error loading recent summary:', error);
+      // 최근 요약이 없으면 에러로 처리하지 않음
+      if (!error.message?.includes('요약이 없습니다')) {
+        setError(error.message || '요약을 불러오는데 실패했습니다.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const generateSummary = async () => {
     try {

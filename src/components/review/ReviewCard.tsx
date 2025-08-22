@@ -21,6 +21,7 @@ interface ReviewCardProps {
   review: ReviewWithDetails;
   showActions?: boolean;
   showFullContent?: boolean;
+  compact?: boolean;
   onEdit?: (review: Review) => void;
   onDelete?: (review: Review) => void;
   className?: string;
@@ -30,6 +31,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
   review,
   showActions = false,
   showFullContent = false,
+  compact = false,
   onEdit,
   onDelete,
   className = '',
@@ -115,15 +117,15 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
 
       <CardContent className="flex-1 flex flex-col">
         {/* Review Content */}
-        <div className="space-y-3 mb-4">
+        <div className={`space-y-3 mb-4 ${compact ? 'space-y-2' : ''}`}>
           <div>
             <p className="text-gray-700 leading-relaxed">
               {showFullContent 
                 ? review.content 
-                : truncateText(review.content, 150)
+                : truncateText(review.content, compact ? 100 : 150)
               }
             </p>
-            {!showFullContent && review.content.length > 150 && (
+            {!showFullContent && review.content.length > (compact ? 100 : 150) && (
               <Link href={`/reviews/${review.id}`}>
                 <Button variant="ghost" size="sm" className="mt-2 p-0 h-auto">
                   더 보기 →
@@ -132,8 +134,8 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
             )}
           </div>
 
-          {/* Additional Details (only show if full content or approved) */}
-          {(showFullContent || review.status === 'APPROVED') && (
+          {/* Additional Details (only show if full content or approved, and not compact) */}
+          {!compact && (showFullContent || review.status === 'APPROVED') && (
             <>
               {review.positivePoints && (
                 <div>
@@ -168,12 +170,12 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
 
         {/* Meta Information */}
         <div className="mt-auto pt-3 border-t border-gray-200">
-          <div className="flex items-center justify-between text-sm text-gray-500">
+          <div className={`flex items-center justify-between text-sm text-gray-500 ${compact ? 'text-xs' : ''}`}>
             <div className="flex items-center space-x-2">
               {review.author && (
                 <span className="font-medium">{review.author.nickname}</span>
               )}
-              {review.studyPeriod && (
+              {!compact && review.studyPeriod && (
                 <>
                   <span>•</span>
                   <span>수강: {formatDate(review.studyPeriod)}</span>
@@ -182,7 +184,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
             </div>
             <div className="flex items-center space-x-2">
               <span>{formatRelativeTime(review.createdAt)}</span>
-              {review.updatedAt.getTime() !== review.createdAt.getTime() && (
+              {!compact && review.updatedAt.getTime() !== review.createdAt.getTime() && (
                 <>
                   <span>•</span>
                   <span className="text-xs">수정됨</span>
