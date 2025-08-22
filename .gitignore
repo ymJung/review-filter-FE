@@ -26,3 +26,18 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Firebase emulator data
+firebase-export-*/
+firestore-export-*/
+
+# Firebase service account keys (if any)
+*-firebase-adminsdk-*.json
+service-account-*.json
+yh-review-filter-firebase-adminsdk.json

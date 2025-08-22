@@ -105,10 +105,13 @@
   - 관리자 통계 API 구현 ✅
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 16. Firebase Security Rules 구현
-  - Firestore 보안 규칙 작성 및 배포
-  - Storage 보안 규칙 구현
-  - 권한별 데이터 접근 제어 테스트
+- [x] 16. Firebase Security Rules 구현
+  - Firestore 보안 규칙 작성 및 배포 ✅
+  - Storage 보안 규칙 구현 ✅
+  - 권한별 데이터 접근 제어 테스트 ✅
+  - Firebase 인덱스 최적화 ✅
+  - Security Rules 테스트 코드 작성 ✅
+  - 클라이언트 측 보안 검증 유틸리티 구현 ✅
   - _Requirements: 10.4_
 
 - [ ] 17. 에러 처리 및 사용자 경험 개선

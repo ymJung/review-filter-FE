@@ -1,0 +1,98 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'ADMIN';
+    }
+    
+    function isNotBlocked() {
+      return !isAuthenticated() || getUserRole() != 'BLOCKED_LOGIN';
+    }
+    
+    function isValidImageFile() {
+      return request.resource.contentType.matches('image/.*') &&
+        request.resource.contentType in ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/heic'] &&
+        request.resource.size < 5 * 1024 * 1024; // 5MB limit
+    }
+
+    // Review verification images
+    match /review-images/{userId}/{reviewId}/{imageId} {
+      // Only the review owner can read their verification images
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == userId || isAdmin());
+      
+      // Only authenticated users can upload verification images for their own reviews
+      allow create: if isAuthenticated() && 
+        request.auth.uid == userId && 
+        isNotBlocked() &&
+        isValidImageFile();
+      
+      // Only the owner or admin can delete verification images
+      allow delete: if isAuthenticated() && 
+        (request.auth.uid == userId || isAdmin());
+      
+      // No updates allowed (delete and recreate instead)
+      allow update: if false;
+    }
+
+    // Profile images (future feature)
+    match /profile-images/{userId}/{imageId} {
+      // Users can read their own profile images, others can read if public
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == userId || isAdmin());
+      
+      // Users can upload their own profile images
+      allow create: if isAuthenticated() && 
+        request.auth.uid == userId && 
+        isNotBlocked() &&
+        isValidImageFile();
+      
+      // Users can update/delete their own profile images
+      allow update, delete: if isAuthenticated() && 
+        (request.auth.uid == userId || isAdmin());
+    }
+
+    // Admin uploads
+    match /admin/{allPaths=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Temporary uploads (for processing)
+    match /temp/{userId}/{allPaths=**} {
+      // Users can upload to their temp folder
+      allow create: if isAuthenticated() && 
+        request.auth.uid == userId && 
+        isNotBlocked() &&
+        isValidImageFile();
+      
+      // Users can read/delete from their temp folder
+      allow read, delete: if isAuthenticated() && 
+        (request.auth.uid == userId || isAdmin());
+      
+      // No updates in temp folder
+      allow update: if false;
+    }
+
+    // Public assets (read-only for everyone)
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Default deny rule
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

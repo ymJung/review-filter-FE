@@ -19,7 +19,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "firebase:emulators": "firebase emulators:start",
+    "firebase:deploy:rules": "firebase deploy --only firestore:rules,storage:rules",
+    "firebase:deploy:indexes": "firebase deploy --only firestore:indexes",
+    "firebase:deploy": "firebase deploy",
+    "test:rules": "firebase emulators:exec --only firestore 'npm run test:firestore'",
+    "test:firestore": "jest firestore.rules.test.js"
   },
   "repository": {
     "type": "git",

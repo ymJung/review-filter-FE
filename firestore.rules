@@ -1,0 +1,214 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions for authentication and authorization
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'ADMIN';
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function canCreateContent() {
+      return isAuthenticated() && getUserRole() in ['AUTH_LOGIN', 'AUTH_PREMIUM', 'ADMIN'];
+    }
+    
+    function canViewContent() {
+      return isAuthenticated() && getUserRole() in ['AUTH_LOGIN', 'AUTH_PREMIUM', 'ADMIN'];
+    }
+    
+    function isNotBlocked() {
+      return !isAuthenticated() || getUserRole() != 'BLOCKED_LOGIN';
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own data, admins can read all
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Users can create their own profile during signup
+      allow create: if isOwner(userId) && 
+        request.resource.data.keys().hasAll(['socialProvider', 'socialId', 'nickname', 'role', 'createdAt', 'updatedAt']) &&
+        request.resource.data.role in ['LOGIN_NOT_AUTH', 'AUTH_LOGIN'] &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+      
+      // Users can update their own profile (limited fields), admins can update all
+      allow update: if (isOwner(userId) && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname', 'updatedAt']) &&
+        request.resource.data.updatedAt == request.time) ||
+        isAdmin();
+      
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+
+    // Courses collection
+    match /courses/{courseId} {
+      // Anyone can read courses (public data)
+      allow read: if isNotBlocked();
+      
+      // Only authenticated users can create courses
+      allow create: if isAuthenticated() && isNotBlocked() &&
+        request.resource.data.keys().hasAll(['title', 'platform', 'createdAt']) &&
+        request.resource.data.createdAt == request.time;
+      
+      // Course creators and admins can update
+      allow update: if (isAuthenticated() && isNotBlocked()) || isAdmin();
+      
+      // Only admins can delete courses
+      allow delete: if isAdmin();
+    }
+
+    // Reviews collection
+    match /reviews/{reviewId} {
+      // Public can read approved reviews, owners can read their own, admins can read all
+      allow read: if (resource.data.status == 'APPROVED' && isNotBlocked()) ||
+        isOwner(resource.data.userId) ||
+        isAdmin();
+      
+      // Authenticated users can create reviews
+      allow create: if isAuthenticated() && isNotBlocked() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.status == 'PENDING' &&
+        request.resource.data.keys().hasAll(['courseId', 'userId', 'content', 'rating', 'status', 'createdAt', 'updatedAt']) &&
+        request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+      
+      // Review owners can update their own reviews (before approval), admins can update all
+      allow update: if (isOwner(resource.data.userId) && 
+        resource.data.status == 'PENDING' &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content', 'rating', 'positivePoints', 'negativePoints', 'changes', 'recommendedFor', 'studyPeriod', 'updatedAt']) &&
+        request.resource.data.updatedAt == request.time) ||
+        isAdmin();
+      
+      // Review owners and admins can delete
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // Review Images collection
+    match /reviewImages/{imageId} {
+      // Only review owners and admins can read review images
+      allow read: if isAuthenticated() && (
+        exists(/databases/$(database)/documents/reviews/$(resource.data.reviewId)) &&
+        (isOwner(get(/databases/$(database)/documents/reviews/$(resource.data.reviewId)).data.userId) || isAdmin())
+      );
+      
+      // Only authenticated users can create review images for their own reviews
+      allow create: if isAuthenticated() && isNotBlocked() &&
+        exists(/databases/$(database)/documents/reviews/$(request.resource.data.reviewId)) &&
+        isOwner(get(/databases/$(database)/documents/reviews/$(request.resource.data.reviewId)).data.userId) &&
+        request.resource.data.keys().hasAll(['reviewId', 'storageUrl', 'createdAt']) &&
+        request.resource.data.createdAt == request.time;
+      
+      // Review owners and admins can delete images
+      allow delete: if isAuthenticated() && (
+        exists(/databases/$(database)/documents/reviews/$(resource.data.reviewId)) &&
+        (isOwner(get(/databases/$(database)/documents/reviews/$(resource.data.reviewId)).data.userId) || isAdmin())
+      );
+    }
+
+    // Comments collection
+    match /comments/{commentId} {
+      // Public can read approved comments, owners can read their own, admins can read all
+      allow read: if (resource.data.status == 'APPROVED' && isNotBlocked()) ||
+        isOwner(resource.data.userId) ||
+        isAdmin();
+      
+      // Authenticated users can create comments
+      allow create: if isAuthenticated() && isNotBlocked() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.status == 'PENDING' &&
+        request.resource.data.keys().hasAll(['reviewId', 'userId', 'content', 'status', 'createdAt']) &&
+        request.resource.data.createdAt == request.time &&
+        exists(/databases/$(database)/documents/reviews/$(request.resource.data.reviewId));
+      
+      // Comment owners can update their own comments (before approval), admins can update all
+      allow update: if (isOwner(resource.data.userId) && 
+        resource.data.status == 'PENDING' &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content']) &&
+        request.resource.data.content.size() > 0) ||
+        isAdmin();
+      
+      // Comment owners and admins can delete
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // Roadmaps collection
+    match /roadmaps/{roadmapId} {
+      // Public can read approved roadmaps, owners can read their own, admins can read all
+      allow read: if (resource.data.status == 'APPROVED' && isNotBlocked()) ||
+        isOwner(resource.data.userId) ||
+        isAdmin();
+      
+      // Authenticated users can create roadmaps
+      allow create: if isAuthenticated() && isNotBlocked() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.status == 'PENDING' &&
+        request.resource.data.keys().hasAll(['title', 'description', 'courseTitle', 'coursePlatform', 'userId', 'status', 'viewCount', 'createdAt']) &&
+        request.resource.data.viewCount == 0 &&
+        request.resource.data.createdAt == request.time;
+      
+      // Roadmap owners can update their own roadmaps (before approval), admins can update all
+      allow update: if (isOwner(resource.data.userId) && 
+        resource.data.status == 'PENDING' &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'description', 'courseTitle', 'coursePlatform', 'nextCourseTitle', 'nextCoursePlatform', 'category'])) ||
+        isAdmin() ||
+        // Allow view count increment for approved roadmaps
+        (resource.data.status == 'APPROVED' && 
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount']) &&
+         request.resource.data.viewCount == resource.data.viewCount + 1);
+      
+      // Roadmap owners and admins can delete
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // Review Summaries collection (AI-generated summaries)
+    match /reviewSummaries/{summaryId} {
+      // Anyone can read non-expired summaries
+      allow read: if isNotBlocked() && resource.data.expiresAt > request.time;
+      
+      // Only system/admin can create summaries
+      allow create: if isAdmin() &&
+        request.resource.data.keys().hasAll(['summary', 'reviewIds', 'createdAt', 'expiresAt']) &&
+        request.resource.data.createdAt == request.time;
+      
+      // Only admin can update/delete summaries
+      allow update, delete: if isAdmin();
+    }
+
+    // Admin-only collections and operations
+    match /admin/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Audit logs (write-only for system, read-only for admins)
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() &&
+        request.resource.data.keys().hasAll(['action', 'userId', 'timestamp', 'details']) &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.timestamp == request.time;
+    }
+
+    // Default deny rule for any other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
