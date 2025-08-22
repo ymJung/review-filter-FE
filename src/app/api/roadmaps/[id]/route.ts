@@ -4,7 +4,7 @@ import { getDoc, updateDoc, increment } from 'firebase/firestore';
 import { getRoadmapDoc, getUserDoc } from '@/lib/firebase/collections';
 import { roadmapConverter, userConverter } from '@/lib/firebase/converters';
 import { getApps } from 'firebase-admin/app';
-import { Roadmap, User, ApiResponse } from '@/types';
+import { Roadmap, ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
 
 // GET /api/roadmaps/[id] - Get specific roadmap and increment view count
@@ -72,6 +72,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       // Hide detailed content for non-approved roadmaps from other users
       ...(canViewFullContent ? {} : {
         description: '검수 중인 로드맵입니다.',
+        courseTitle: '검수 중',
+        coursePlatform: '검수 중',
         nextCourseTitle: undefined,
         nextCoursePlatform: undefined,
       }),
@@ -165,7 +167,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
       
       // Reset status to pending if content is modified
-      if (updateData.title || updateData.description) {
+      if (updateData.title || updateData.description || updateData.courseTitle || updateData.coursePlatform) {
         updates.status = 'PENDING';
       }
     }
@@ -248,7 +250,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       );
     }
 
-    // Soft delete by updating status
+    // Soft delete by updating status to REJECTED
     await updateDoc(getRoadmapDoc(id), {
       status: 'REJECTED',
     });
