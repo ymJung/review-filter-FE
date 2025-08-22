@@ -54,11 +54,12 @@ export function RoadmapCard({
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
-            <Link href={`/roadmaps/${roadmap.id}`}>
-              <h3 className="text-lg font-semibold text-gray-900 hover:text-blue-600 cursor-pointer">
-                {roadmap.title}
-              </h3>
-            </Link>
+            <h3 
+              className="text-lg font-semibold text-gray-900 hover:text-blue-600 cursor-pointer"
+              onClick={() => alert(`로드맵 상세 페이지 (ID: ${roadmap.id})\n\nTask 11.3에서 구현될 예정입니다.`)}
+            >
+              {roadmap.title}
+            </h3>
             {getStatusBadge(roadmap.status)}
           </div>
           
@@ -145,11 +146,14 @@ export function RoadmapCard({
 
       {/* View Details Link */}
       <div className="mt-4 pt-4 border-t border-gray-100">
-        <Link href={`/roadmaps/${roadmap.id}`}>
-          <Button variant="ghost" size="sm" className="w-full">
-            자세히 보기 →
-          </Button>
-        </Link>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="w-full"
+          onClick={() => alert(`로드맵 상세 페이지 (ID: ${roadmap.id})\n\nTask 11.3에서 구현될 예정입니다.`)}
+        >
+          자세히 보기 →
+        </Button>
       </div>
     </Card>
   );
