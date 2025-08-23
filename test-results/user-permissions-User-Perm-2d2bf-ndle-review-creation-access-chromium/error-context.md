@@ -1,0 +1,81 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e6]:
+        - link "R Review Filter" [ref=e8] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e10] [cursor=pointer]: R
+          - generic [ref=e11] [cursor=pointer]: Review Filter
+        - navigation [ref=e12]:
+          - link "리뷰" [ref=e13] [cursor=pointer]:
+            - /url: /reviews
+          - link "로드맵" [ref=e14] [cursor=pointer]:
+            - /url: /roadmaps
+        - link "로그인" [ref=e16] [cursor=pointer]:
+          - /url: /login
+          - button "로그인" [ref=e17] [cursor=pointer]
+    - main [ref=e18]:
+      - generic [ref=e22]:
+        - img [ref=e24]
+        - generic [ref=e26]:
+          - heading "로그인이 필요합니다" [level=3] [ref=e27]
+          - generic [ref=e28]:
+            - paragraph [ref=e29]: 이 페이지에 접근하려면 로그인해주세요.
+            - link "로그인하기" [ref=e30] [cursor=pointer]:
+              - /url: /login
+              - button "로그인하기" [ref=e31] [cursor=pointer]
+    - contentinfo [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - generic [ref=e38]: R
+              - generic [ref=e39]: Review Filter
+            - paragraph [ref=e40]: 강의 후기를 모으는 플랫폼입니다. 다양한 온라인 강의에 대한 솔직한 후기를 공유하고, 학습 로드맵을 통해 더 나은 학습 경험을 만들어보세요.
+            - generic [ref=e41]:
+              - link "이메일" [ref=e42] [cursor=pointer]:
+                - /url: mailto:contact@reviewfilter.com
+                - generic [ref=e43] [cursor=pointer]: 이메일
+                - img [ref=e44] [cursor=pointer]
+              - link "GitHub" [ref=e46] [cursor=pointer]:
+                - /url: https://github.com/reviewfilter
+                - generic [ref=e47] [cursor=pointer]: GitHub
+                - img [ref=e48] [cursor=pointer]
+          - generic [ref=e50]:
+            - heading "서비스" [level=3] [ref=e51]
+            - list [ref=e52]:
+              - listitem [ref=e53]:
+                - link "리뷰 둘러보기" [ref=e54] [cursor=pointer]:
+                  - /url: /reviews
+              - listitem [ref=e55]:
+                - link "로드맵 둘러보기" [ref=e56] [cursor=pointer]:
+                  - /url: /roadmaps
+              - listitem [ref=e57]:
+                - link "리뷰 작성하기" [ref=e58] [cursor=pointer]:
+                  - /url: /write/review
+              - listitem [ref=e59]:
+                - link "로드맵 작성하기" [ref=e60] [cursor=pointer]:
+                  - /url: /write/roadmap
+          - generic [ref=e61]:
+            - heading "정보" [level=3] [ref=e62]
+            - list [ref=e63]:
+              - listitem [ref=e64]:
+                - link "회사소개" [ref=e65] [cursor=pointer]:
+                  - /url: /about
+              - listitem [ref=e66]:
+                - link "이용약관" [ref=e67] [cursor=pointer]:
+                  - /url: /terms
+              - listitem [ref=e68]:
+                - link "개인정보처리방침" [ref=e69] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=e70]:
+                - link "문의하기" [ref=e71] [cursor=pointer]:
+                  - /url: /contact
+        - generic [ref=e73]:
+          - paragraph [ref=e74]: © 2025 Review Filter. All rights reserved.
+          - generic [ref=e76]: Made with ❤️ for learners
+```

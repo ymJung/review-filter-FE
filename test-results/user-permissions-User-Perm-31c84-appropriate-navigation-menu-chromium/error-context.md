@@ -1,0 +1,141 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e5]:
+        - link "R Review Filter" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e9] [cursor=pointer]: R
+          - generic [ref=e10] [cursor=pointer]: Review Filter
+        - navigation [ref=e11]:
+          - link "리뷰" [ref=e12] [cursor=pointer]:
+            - /url: /reviews
+          - link "로드맵" [ref=e13] [cursor=pointer]:
+            - /url: /roadmaps
+        - link "로그인" [ref=e15] [cursor=pointer]:
+          - /url: /login
+          - button "로그인" [ref=e16] [cursor=pointer]
+    - main [ref=e17]:
+      - generic [ref=e20]:
+        - heading "Review Filter" [level=1] [ref=e21]
+        - paragraph [ref=e22]: 강의 후기를 모으는 플랫폼
+        - paragraph [ref=e23]: 다양한 온라인 강의에 대한 솔직한 후기를 공유하고, 학습 로드맵을 통해 더 나은 학습 경험을 만들어보세요.
+        - generic [ref=e24]:
+          - link "리뷰 둘러보기" [ref=e25] [cursor=pointer]:
+            - /url: /reviews
+            - button "리뷰 둘러보기" [ref=e26] [cursor=pointer]
+          - link "로그인하고 시작하기" [ref=e27] [cursor=pointer]:
+            - /url: /login
+            - button "로그인하고 시작하기" [ref=e28] [cursor=pointer]
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - heading "왜 Review Filter인가요?" [level=2] [ref=e32]
+          - paragraph [ref=e33]: 온라인 학습의 효율성을 높이는 다양한 기능을 제공합니다.
+        - generic [ref=e34]:
+          - generic [ref=e36]:
+            - img [ref=e38]
+            - heading "솔직한 리뷰" [level=3] [ref=e40]
+            - paragraph [ref=e41]: 실제 수강생들의 솔직한 후기를 통해 강의의 장단점을 미리 파악할 수 있습니다.
+          - generic [ref=e43]:
+            - img [ref=e45]
+            - heading "학습 로드맵" [level=3] [ref=e47]
+            - paragraph [ref=e48]: 체계적인 학습 경로를 제시하여 효율적인 스킬 향상을 도와드립니다.
+          - generic [ref=e50]:
+            - img [ref=e52]
+            - heading "커뮤니티" [level=3] [ref=e54]
+            - paragraph [ref=e55]: 같은 관심사를 가진 학습자들과 소통하며 함께 성장할 수 있습니다.
+      - generic [ref=e57]:
+        - generic [ref=e58]:
+          - heading "🤖 AI 리뷰 인사이트" [level=2] [ref=e59]
+          - paragraph [ref=e60]: 최신 리뷰들을 AI가 분석하여 핵심 인사이트를 제공합니다.
+        - generic [ref=e62]:
+          - generic [ref=e63]:
+            - heading "🤖 AI 리뷰 요약" [level=3] [ref=e64]
+            - button "요약 생성" [ref=e65] [cursor=pointer]
+          - generic [ref=e66]:
+            - generic [ref=e67]: 🤖
+            - paragraph [ref=e68]: AI 리뷰 요약이 없습니다
+            - paragraph [ref=e69]: 최근 리뷰들을 분석하여 인사이트를 제공해드립니다.
+            - button "AI 요약 생성하기" [ref=e70] [cursor=pointer]
+      - generic [ref=e72]:
+        - generic [ref=e73]:
+          - heading "인기 카테고리" [level=2] [ref=e74]
+          - paragraph [ref=e75]: 최근 리뷰가 많이 작성된 인기 카테고리를 확인해보세요.
+        - generic [ref=e77]:
+          - heading "인기 카테고리 TOP 8" [level=3] [ref=e79]
+          - generic [ref=e82]: 통계 데이터가 없습니다.
+      - generic [ref=e84]:
+        - generic [ref=e85]:
+          - heading "최근 리뷰" [level=2] [ref=e86]
+          - paragraph [ref=e87]: 다른 학습자들이 최근에 공유한 솔직한 강의 후기를 확인해보세요.
+        - generic [ref=e90]:
+          - generic [ref=e91]: 📝
+          - paragraph [ref=e92]: 아직 리뷰가 없습니다
+          - paragraph [ref=e93]: 첫 번째 리뷰를 작성해보세요!
+        - link "모든 리뷰 보기" [ref=e95] [cursor=pointer]:
+          - /url: /reviews
+          - button "모든 리뷰 보기" [ref=e96] [cursor=pointer]
+      - generic [ref=e99]:
+        - heading "지금 시작해보세요" [level=2] [ref=e100]
+        - paragraph [ref=e101]: 회원가입하고 다양한 강의 후기를 확인해보세요.
+        - generic [ref=e102]:
+          - link "무료로 시작하기" [ref=e103] [cursor=pointer]:
+            - /url: /login
+            - button "무료로 시작하기" [ref=e104] [cursor=pointer]
+          - link "리뷰 미리보기" [ref=e105] [cursor=pointer]:
+            - /url: /reviews
+            - button "리뷰 미리보기" [ref=e106] [cursor=pointer]
+    - contentinfo [ref=e107]:
+      - generic [ref=e108]:
+        - generic [ref=e109]:
+          - generic [ref=e110]:
+            - generic [ref=e111]:
+              - generic [ref=e113]: R
+              - generic [ref=e114]: Review Filter
+            - paragraph [ref=e115]: 강의 후기를 모으는 플랫폼입니다. 다양한 온라인 강의에 대한 솔직한 후기를 공유하고, 학습 로드맵을 통해 더 나은 학습 경험을 만들어보세요.
+            - generic [ref=e116]:
+              - link "이메일" [ref=e117] [cursor=pointer]:
+                - /url: mailto:contact@reviewfilter.com
+                - generic [ref=e118] [cursor=pointer]: 이메일
+                - img [ref=e119] [cursor=pointer]
+              - link "GitHub" [ref=e121] [cursor=pointer]:
+                - /url: https://github.com/reviewfilter
+                - generic [ref=e122] [cursor=pointer]: GitHub
+                - img [ref=e123] [cursor=pointer]
+          - generic [ref=e125]:
+            - heading "서비스" [level=3] [ref=e126]
+            - list [ref=e127]:
+              - listitem [ref=e128]:
+                - link "리뷰 둘러보기" [ref=e129] [cursor=pointer]:
+                  - /url: /reviews
+              - listitem [ref=e130]:
+                - link "로드맵 둘러보기" [ref=e131] [cursor=pointer]:
+                  - /url: /roadmaps
+              - listitem [ref=e132]:
+                - link "리뷰 작성하기" [ref=e133] [cursor=pointer]:
+                  - /url: /write/review
+              - listitem [ref=e134]:
+                - link "로드맵 작성하기" [ref=e135] [cursor=pointer]:
+                  - /url: /write/roadmap
+          - generic [ref=e136]:
+            - heading "정보" [level=3] [ref=e137]
+            - list [ref=e138]:
+              - listitem [ref=e139]:
+                - link "회사소개" [ref=e140] [cursor=pointer]:
+                  - /url: /about
+              - listitem [ref=e141]:
+                - link "이용약관" [ref=e142] [cursor=pointer]:
+                  - /url: /terms
+              - listitem [ref=e143]:
+                - link "개인정보처리방침" [ref=e144] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=e145]:
+                - link "문의하기" [ref=e146] [cursor=pointer]:
+                  - /url: /contact
+        - generic [ref=e148]:
+          - paragraph [ref=e149]: © 2025 Review Filter. All rights reserved.
+          - generic [ref=e151]: Made with ❤️ for learners
+  - alert [ref=e152]
+```

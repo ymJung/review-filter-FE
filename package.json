@@ -26,6 +26,10 @@
     "test:unit": "jest --testPathIgnorePatterns=integration",
     "test:integration": "jest --testPathPatterns=integration",
     "test:integration:watch": "jest --testPathPatterns=integration --watch",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
     "firebase:emulators": "firebase emulators:start",
     "firebase:deploy:rules": "firebase deploy --only firestore:rules,storage:rules",
     "firebase:deploy:indexes": "firebase deploy --only firestore:indexes",
@@ -46,6 +50,7 @@
   },
   "homepage": "https://github.com/ymJung/review-filter-FE#readme",
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",

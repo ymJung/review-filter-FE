@@ -1,0 +1,218 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e6]:
+        - link "R Review Filter" [ref=e8] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e10] [cursor=pointer]: R
+          - generic [ref=e11] [cursor=pointer]: Review Filter
+        - navigation [ref=e12]:
+          - link "리뷰" [ref=e13] [cursor=pointer]:
+            - /url: /reviews
+          - link "로드맵" [ref=e14] [cursor=pointer]:
+            - /url: /roadmaps
+        - link "로그인" [ref=e16] [cursor=pointer]:
+          - /url: /login
+          - button "로그인" [ref=e17] [cursor=pointer]
+    - main [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e21]:
+          - heading "강의 리뷰" [level=1] [ref=e22]
+          - paragraph [ref=e23]: 다양한 온라인 강의에 대한 솔직한 후기를 확인해보세요.
+        - generic [ref=e25]:
+          - combobox [ref=e26]:
+            - option "모든 플랫폼" [selected]
+            - option "인프런"
+            - option "유데미"
+            - option "패스트캠퍼스"
+            - option "코드잇"
+            - option "프로그래머스"
+            - option "노마드코더"
+            - option "드림코딩"
+            - option "생활코딩"
+            - option "기타"
+          - combobox [ref=e27]:
+            - option "모든 카테고리" [selected]
+            - option "프로그래밍"
+            - option "디자인"
+            - option "마케팅"
+            - option "비즈니스"
+            - option "언어"
+            - option "음악"
+            - option "사진/영상"
+            - option "요리"
+            - option "건강/피트니스"
+            - option "기타"
+          - combobox [ref=e28]:
+            - option "모든 평점" [selected]
+            - option "⭐⭐⭐⭐⭐ (5점)"
+            - option "⭐⭐⭐⭐ (4점 이상)"
+            - option "⭐⭐⭐ (3점 이상)"
+          - textbox "강의명이나 내용으로 검색..." [ref=e30]
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e34]:
+              - generic [ref=e35]:
+                - generic [ref=e36]:
+                  - heading "React 완벽 가이드" [level=3] [ref=e37]
+                  - generic [ref=e38]:
+                    - generic [ref=e39]: 인프런
+                    - generic [ref=e40]: 프로그래밍
+                    - generic [ref=e41]: 김개발
+                - generic [ref=e42]:
+                  - generic [ref=e43]: ⭐
+                  - generic [ref=e44]: ⭐
+                  - generic [ref=e45]: ⭐
+                  - generic [ref=e46]: ⭐
+                  - generic [ref=e47]: ⭐
+                  - generic [ref=e48]: (5점)
+              - generic [ref=e50]: 승인됨
+            - generic [ref=e51]:
+              - generic [ref=e52]:
+                - paragraph [ref=e54]: 정말 좋은 강의였습니다. React의 기초부터 고급 개념까지 체계적으로 잘 설명되어 있어서 초보자도 쉽게 따라할 수 있었습니다.
+                - generic [ref=e55]:
+                  - heading "👍 좋았던 점" [level=4] [ref=e56]
+                  - paragraph [ref=e57]: 체계적인 설명과 실습 프로젝트
+                - generic [ref=e58]:
+                  - heading "👎 아쉬웠던 점" [level=4] [ref=e59]
+                  - paragraph [ref=e60]: 조금 더 심화 내용이 있었으면
+                - generic [ref=e61]:
+                  - heading "💡 수강 후 변화" [level=4] [ref=e62]
+                  - paragraph [ref=e63]: 실제 프로젝트에 React를 적용할 수 있게 되었습니다
+                - generic [ref=e64]:
+                  - heading "🎯 추천 대상" [level=4] [ref=e65]
+                  - paragraph [ref=e66]: React 입문자
+              - generic [ref=e68]:
+                - generic [ref=e70]: 멋진개발자123
+                - generic [ref=e72]: 2024년 1월 15일
+          - generic [ref=e73]:
+            - generic [ref=e75]:
+              - generic [ref=e76]:
+                - generic [ref=e77]:
+                  - heading "JavaScript 마스터클래스" [level=3] [ref=e78]
+                  - generic [ref=e79]:
+                    - generic [ref=e80]: 유데미
+                    - generic [ref=e81]: 프로그래밍
+                    - generic [ref=e82]: 박자바
+                - generic [ref=e83]:
+                  - generic [ref=e84]: ⭐
+                  - generic [ref=e85]: ⭐
+                  - generic [ref=e86]: ⭐
+                  - generic [ref=e87]: ⭐
+                  - generic [ref=e88]: ⭐
+                  - generic [ref=e89]: (4점)
+              - generic [ref=e91]: 승인됨
+            - generic [ref=e92]:
+              - generic [ref=e93]:
+                - paragraph [ref=e95]: JavaScript의 핵심 개념들을 잘 정리해주는 강의입니다. ES6+ 문법부터 비동기 처리까지 폭넓게 다루고 있어서 도움이 많이 되었습니다.
+                - generic [ref=e96]:
+                  - heading "👍 좋았던 점" [level=4] [ref=e97]
+                  - paragraph [ref=e98]: 핵심 개념 정리가 잘 되어 있음
+                - generic [ref=e99]:
+                  - heading "👎 아쉬웠던 점" [level=4] [ref=e100]
+                  - paragraph [ref=e101]: 예제가 조금 더 다양했으면
+              - generic [ref=e103]:
+                - generic [ref=e105]: 똑똑한고양이456
+                - generic [ref=e107]: 2024년 1월 10일
+          - generic [ref=e108]:
+            - generic [ref=e110]:
+              - generic [ref=e111]:
+                - generic [ref=e112]:
+                  - heading "Node.js 백엔드 개발" [level=3] [ref=e113]
+                  - generic [ref=e114]:
+                    - generic [ref=e115]: 패스트캠퍼스
+                    - generic [ref=e116]: 프로그래밍
+                    - generic [ref=e117]: 이노드
+                - generic [ref=e118]:
+                  - generic [ref=e119]: ⭐
+                  - generic [ref=e120]: ⭐
+                  - generic [ref=e121]: ⭐
+                  - generic [ref=e122]: ⭐
+                  - generic [ref=e123]: ⭐
+                  - generic [ref=e124]: (5점)
+              - generic [ref=e126]: 승인됨
+            - generic [ref=e127]:
+              - generic [ref=e128]:
+                - paragraph [ref=e130]: 백엔드 개발의 전반적인 내용을 다루는 강의입니다. Express.js부터 데이터베이스 연동, 인증 시스템까지 실무에서 필요한 모든 것을 배울 수 있었습니다.
+                - generic [ref=e131]:
+                  - heading "👍 좋았던 점" [level=4] [ref=e132]
+                  - paragraph [ref=e133]: 실무 중심의 내용
+                - generic [ref=e134]:
+                  - heading "👎 아쉬웠던 점" [level=4] [ref=e135]
+                  - paragraph [ref=e136]: 초보자에게는 조금 어려울 수 있음
+                - generic [ref=e137]:
+                  - heading "💡 수강 후 변화" [level=4] [ref=e138]
+                  - paragraph [ref=e139]: 실제 백엔드 API를 개발할 수 있게 되었습니다
+                - generic [ref=e140]:
+                  - heading "🎯 추천 대상" [level=4] [ref=e141]
+                  - paragraph [ref=e142]: 백엔드 개발 입문자
+              - generic [ref=e144]:
+                - generic [ref=e146]: 열정적인개발자789
+                - generic [ref=e148]: 2024년 1월 5일
+        - generic [ref=e151]:
+          - generic [ref=e152]: 광고
+          - generic [ref=e153]: 프리미엄으로 업그레이드하여 광고를 제거하세요
+        - generic [ref=e156]:
+          - img [ref=e158]
+          - heading "더 많은 리뷰를 확인하세요" [level=3] [ref=e160]
+          - paragraph [ref=e161]: 로그인하여 더 많은 콘텐츠를 확인하세요.
+          - generic [ref=e162]:
+            - link "로그인하기" [ref=e163] [cursor=pointer]:
+              - /url: /login
+              - button "로그인하기" [ref=e164] [cursor=pointer]
+            - button "프리미엄 업그레이드" [ref=e165] [cursor=pointer]
+    - contentinfo [ref=e166]:
+      - generic [ref=e167]:
+        - generic [ref=e168]:
+          - generic [ref=e169]:
+            - generic [ref=e170]:
+              - generic [ref=e172]: R
+              - generic [ref=e173]: Review Filter
+            - paragraph [ref=e174]: 강의 후기를 모으는 플랫폼입니다. 다양한 온라인 강의에 대한 솔직한 후기를 공유하고, 학습 로드맵을 통해 더 나은 학습 경험을 만들어보세요.
+            - generic [ref=e175]:
+              - link "이메일" [ref=e176] [cursor=pointer]:
+                - /url: mailto:contact@reviewfilter.com
+                - generic [ref=e177] [cursor=pointer]: 이메일
+                - img [ref=e178] [cursor=pointer]
+              - link "GitHub" [ref=e180] [cursor=pointer]:
+                - /url: https://github.com/reviewfilter
+                - generic [ref=e181] [cursor=pointer]: GitHub
+                - img [ref=e182] [cursor=pointer]
+          - generic [ref=e184]:
+            - heading "서비스" [level=3] [ref=e185]
+            - list [ref=e186]:
+              - listitem [ref=e187]:
+                - link "리뷰 둘러보기" [ref=e188] [cursor=pointer]:
+                  - /url: /reviews
+              - listitem [ref=e189]:
+                - link "로드맵 둘러보기" [ref=e190] [cursor=pointer]:
+                  - /url: /roadmaps
+              - listitem [ref=e191]:
+                - link "리뷰 작성하기" [ref=e192] [cursor=pointer]:
+                  - /url: /write/review
+              - listitem [ref=e193]:
+                - link "로드맵 작성하기" [ref=e194] [cursor=pointer]:
+                  - /url: /write/roadmap
+          - generic [ref=e195]:
+            - heading "정보" [level=3] [ref=e196]
+            - list [ref=e197]:
+              - listitem [ref=e198]:
+                - link "회사소개" [ref=e199] [cursor=pointer]:
+                  - /url: /about
+              - listitem [ref=e200]:
+                - link "이용약관" [ref=e201] [cursor=pointer]:
+                  - /url: /terms
+              - listitem [ref=e202]:
+                - link "개인정보처리방침" [ref=e203] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=e204]:
+                - link "문의하기" [ref=e205] [cursor=pointer]:
+                  - /url: /contact
+        - generic [ref=e207]:
+          - paragraph [ref=e208]: © 2025 Review Filter. All rights reserved.
+          - generic [ref=e210]: Made with ❤️ for learners
+```
