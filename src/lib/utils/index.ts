@@ -230,7 +230,7 @@ export const throttle = <T extends (...args: any[]) => any>(
   };
 };
 
-// Error handling utilities
+// Error handling utilities (deprecated - use errorHandler.ts instead)
 export const handleError = (error: unknown): string => {
   if (error instanceof Error) {
     return error.message;
