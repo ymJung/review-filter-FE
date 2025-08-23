@@ -10,8 +10,9 @@ import { AdminDashboard } from '@/components/admin/AdminDashboard';
 import { ReviewModerationPanel } from '@/components/admin/ReviewModerationPanel';
 import { RoadmapModerationPanel } from '@/components/admin/RoadmapModerationPanel';
 import { UserManagementPanel } from '@/components/admin/UserManagementPanel';
+import { PerformanceDashboard } from '@/components/admin/PerformanceDashboard';
 
-type AdminTab = 'dashboard' | 'reviews' | 'roadmaps' | 'users';
+type AdminTab = 'dashboard' | 'reviews' | 'roadmaps' | 'users' | 'performance';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
@@ -21,6 +22,7 @@ export default function AdminPage() {
     { id: 'reviews' as AdminTab, label: '리뷰 검수', icon: '📝' },
     { id: 'roadmaps' as AdminTab, label: '로드맵 검수', icon: '🗺️' },
     { id: 'users' as AdminTab, label: '사용자 관리', icon: '👥' },
+    { id: 'performance' as AdminTab, label: '성능 모니터링', icon: '⚡' },
   ];
 
   const renderTabContent = () => {
@@ -33,6 +35,8 @@ export default function AdminPage() {
         return <RoadmapModerationPanel />;
       case 'users':
         return <UserManagementPanel />;
+      case 'performance':
+        return <PerformanceDashboard />;
       default:
         return <AdminDashboard />;
     }

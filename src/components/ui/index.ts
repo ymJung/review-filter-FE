@@ -27,3 +27,15 @@ export {
   SkeletonForm,
   SkeletonStats
 } from './Skeleton';
+
+// Performance optimized components
+export { 
+  OptimizedImage,
+  AvatarImage,
+  CardImage,
+  HeroImage,
+  ProgressiveImage,
+  ImageGallery,
+  type OptimizedImageProps,
+  type ImageGalleryProps
+} from './OptimizedImage';
