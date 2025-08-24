@@ -167,7 +167,7 @@ class HealthMonitor {
           status = 'degraded';
         }
         
-        if (navigation && navigation.loadEventEnd - navigation.navigationStart > 5000) {
+        if (navigation && navigation.loadEventEnd - navigation.fetchStart > 5000) {
           status = 'degraded';
         }
         
@@ -179,8 +179,8 @@ class HealthMonitor {
             memory,
             connection,
             navigation: navigation ? {
-              totalLoadTime: navigation.loadEventEnd - navigation.navigationStart,
-              domContentLoaded: navigation.domContentLoadedEventEnd - navigation.navigationStart,
+              totalLoadTime: navigation.loadEventEnd - navigation.fetchStart,
+              domContentLoaded: navigation.domContentLoadedEventEnd - navigation.fetchStart,
             } : null,
           },
           timestamp: Date.now(),
@@ -346,8 +346,10 @@ export const createHealthCheckEndpoints = () => {
         const { getFirestore } = await import('firebase/firestore');
         const db = getFirestore();
         
-        // Simple query to test connection
-        await db._delegate._databaseId;
+        // Simple query to test connection - just check if db exists
+        if (!db) {
+          throw new Error('Firebase not initialized');
+        }
         
         return {
           status: 'healthy',

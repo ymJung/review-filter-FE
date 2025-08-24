@@ -129,7 +129,7 @@ describe('imageOptimization utilities', () => {
     it('should handle missing canvas context', async () => {
       const testFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
       
-      mockCanvas.getContext.mockReturnValue(null);
+      mockCanvas.getContext.mockReturnValue(null as any);
 
       await expect(optimizeImage(testFile)).rejects.toThrow('Canvas context not available');
     });

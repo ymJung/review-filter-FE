@@ -69,7 +69,7 @@ class PerformanceMonitor {
       { name: 'REQUEST_RESPONSE', value: entry.responseEnd - entry.requestStart },
       { name: 'DOM_PARSE', value: entry.domContentLoadedEventEnd - entry.responseEnd },
       { name: 'LOAD_COMPLETE', value: entry.loadEventEnd - entry.loadEventStart },
-      { name: 'TOTAL_LOAD_TIME', value: entry.loadEventEnd - entry.navigationStart },
+      { name: 'TOTAL_LOAD_TIME', value: entry.loadEventEnd - entry.fetchStart },
     ];
 
     metrics.forEach(metric => this.recordMetric(metric.name, metric.value));
@@ -167,37 +167,30 @@ export const initWebVitals = async () => {
   if (typeof window === 'undefined') return;
 
   try {
-    const { getCLS, getFID, getFCP, getLCP, getTTFB } = await import('web-vitals');
+    const webVitals = await import('web-vitals');
 
-    getCLS((metric) => performanceMonitor.recordWebVital({
+    webVitals.onCLS((metric: any) => performanceMonitor.recordWebVital({
       name: 'CLS',
       value: metric.value,
       rating: metric.rating,
       timestamp: Date.now(),
     }));
 
-    getFID((metric) => performanceMonitor.recordWebVital({
-      name: 'FID',
-      value: metric.value,
-      rating: metric.rating,
-      timestamp: Date.now(),
-    }));
-
-    getFCP((metric) => performanceMonitor.recordWebVital({
+    webVitals.onFCP((metric: any) => performanceMonitor.recordWebVital({
       name: 'FCP',
       value: metric.value,
       rating: metric.rating,
       timestamp: Date.now(),
     }));
 
-    getLCP((metric) => performanceMonitor.recordWebVital({
+    webVitals.onLCP((metric: any) => performanceMonitor.recordWebVital({
       name: 'LCP',
       value: metric.value,
       rating: metric.rating,
       timestamp: Date.now(),
     }));
 
-    getTTFB((metric) => performanceMonitor.recordWebVital({
+    webVitals.onTTFB((metric: any) => performanceMonitor.recordWebVital({
       name: 'TTFB',
       value: metric.value,
       rating: metric.rating,
