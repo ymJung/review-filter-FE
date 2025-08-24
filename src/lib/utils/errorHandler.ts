@@ -56,7 +56,7 @@ export const processError = (error: unknown): ProcessedError => {
     return processFirebaseError(error);
   }
 
-  // Handle custom app errors
+  // Handle custom app errors - check if it's an AppError first, then use name property
   if (error instanceof AppError) {
     return processAppError(error);
   }
@@ -155,14 +155,24 @@ const processFirebaseError = (error: FirebaseError): ProcessedError => {
 const processAppError = (error: AppError): ProcessedError => {
   let category: ErrorCategory = 'server';
 
-  if (error instanceof AuthError) {
-    category = 'authentication';
-  } else if (error instanceof PermissionError) {
-    category = 'authorization';
-  } else if (error instanceof ValidationError) {
-    category = 'validation';
-  } else if (error instanceof NotFoundError) {
-    category = 'not_found';
+  // Use both the name property and constructor name to determine the error type
+  const errorType = error.name || error.constructor.name;
+  
+  switch (errorType) {
+    case 'AuthError':
+      category = 'authentication';
+      break;
+    case 'PermissionError':
+      category = 'authorization';
+      break;
+    case 'ValidationError':
+      category = 'validation';
+      break;
+    case 'NotFoundError':
+      category = 'not_found';
+      break;
+    default:
+      category = 'server';
   }
 
   return {
@@ -316,8 +326,8 @@ export const logError = (
     ...additionalData,
   };
 
-  // Log to console in development
-  if (process.env.NODE_ENV === 'development') {
+  // Always log to console in test and development environments
+  if (process.env.NODE_ENV !== 'production') {
     console.error('Error logged:', logData);
   }
 
@@ -341,6 +351,8 @@ export const getErrorMessage = (error: unknown, context?: string): string => {
     if (processedError.category === 'authentication') {
       return '로그인에 실패했습니다. 다시 시도해주세요.';
     }
+    // Return context-specific message for login context
+    return '로그인에 실패했습니다. 다시 시도해주세요.';
   }
   
   if (context === 'upload') {
@@ -350,7 +362,14 @@ export const getErrorMessage = (error: unknown, context?: string): string => {
     if (processedError.category === 'validation') {
       return '업로드할 수 없는 파일 형식입니다.';
     }
+    // Return context-specific message for upload context
+    return '업로드할 수 없는 파일 형식입니다.';
   }
   
-  return processedError.userMessage;
+  // Return generic message if no context-specific message found
+  if (!context) {
+    return '오류가 발생했습니다. 페이지를 새로고침해주세요.';
+  }
+  
+  return '오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
 };

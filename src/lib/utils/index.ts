@@ -87,8 +87,8 @@ export const calculatePercentage = (value: number, total: number): number => {
 
 // Validation utilities
 export const isValidEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  return emailRegex.test(email) && !email.includes('..');
 };
 
 export const isValidUrl = (url: string): boolean => {
@@ -244,7 +244,7 @@ export const handleError = (error: unknown): string => {
 };
 
 export const isFirebaseError = (error: any): boolean => {
-  return error?.code && typeof error.code === 'string' && error.code.includes('/');
+  return !!(error?.code && typeof error.code === 'string' && error.code.includes('/'));
 };
 
 // Image utilities

@@ -22,7 +22,7 @@ describe('cache utilities', () => {
     });
 
     it('should return null for non-existent keys', () => {
-      expect(cache.get('nonexistent')).toBeNull();
+      expect(cache.get('nonexistent')).toBe(null);
     });
 
     it('should respect TTL', async () => {
@@ -31,7 +31,7 @@ describe('cache utilities', () => {
 
       // Wait for expiration
       await new Promise(resolve => setTimeout(resolve, 150));
-      expect(cache.get('key1')).toBeNull();
+      expect(cache.get('key1')).toBe(null);
     });
 
     it('should check if key exists', () => {
@@ -43,7 +43,7 @@ describe('cache utilities', () => {
     it('should delete items', () => {
       cache.set('key1', 'value1');
       expect(cache.delete('key1')).toBe(true);
-      expect(cache.get('key1')).toBeNull();
+      expect(cache.get('key1')).toBe(null);
       expect(cache.delete('nonexistent')).toBe(false);
     });
 
@@ -60,7 +60,7 @@ describe('cache utilities', () => {
       cache.set('key3', 'value3');
       cache.set('key4', 'value4'); // Should evict key1
 
-      expect(cache.get('key1')).toBeNull();
+      expect(cache.get('key1')).toBe(null);
       expect(cache.get('key2')).toBe('value2');
       expect(cache.get('key3')).toBe('value3');
       expect(cache.get('key4')).toBe('value4');
@@ -78,7 +78,7 @@ describe('cache utilities', () => {
       cache.set('key4', 'value4');
 
       expect(cache.get('key1')).toBe('value1');
-      expect(cache.get('key2')).toBeNull();
+      expect(cache.get('key2')).toBe(null);
       expect(cache.get('key3')).toBe('value3');
       expect(cache.get('key4')).toBe('value4');
     });
@@ -146,7 +146,7 @@ describe('cache utilities', () => {
 
     it('should return null for non-existent keys', async () => {
       const result = await cache.get('nonexistent');
-      expect(result).toBeNull();
+      expect(result).toBe(null);
     });
 
     it('should respect TTL', async () => {
@@ -157,14 +157,14 @@ describe('cache utilities', () => {
       // Wait for expiration
       await new Promise(resolve => setTimeout(resolve, 150));
       result = await cache.get('key1');
-      expect(result).toBeNull();
+      expect(result).toBe(null);
     });
 
     it('should delete items', async () => {
       await cache.set('key1', 'value1');
       cache.delete('key1');
       const result = await cache.get('key1');
-      expect(result).toBeNull();
+      expect(result).toBe(null);
     });
 
     it('should clear all items with prefix', async () => {
@@ -216,14 +216,14 @@ describe('cache utilities', () => {
       });
 
       const result = await cache.get('key1');
-      expect(result).toBeNull();
+      expect(result).toBe(null);
     });
 
     it('should handle invalid JSON gracefully', async () => {
       (mockStorage.getItem as jest.Mock).mockReturnValue('invalid json');
 
       const result = await cache.get('key1');
-      expect(result).toBeNull();
+      expect(result).toBe(null);
       expect(mockStorage.removeItem).toHaveBeenCalledWith('test_key1');
     });
   });
@@ -323,7 +323,7 @@ describe('cache utilities', () => {
 
       queryCache.invalidate('test');
       const result2 = await queryCache.get('test');
-      expect(result2).toBeNull();
+      expect(result2).toBe(null);
     });
 
     it('should proxy methods to image cache instance', () => {
@@ -333,7 +333,7 @@ describe('cache utilities', () => {
 
       imageCache.delete('test');
       const result2 = imageCache.get('test');
-      expect(result2).toBeNull();
+      expect(result2).toBe(null);
     });
   });
 

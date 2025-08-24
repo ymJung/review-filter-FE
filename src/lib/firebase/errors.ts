@@ -118,7 +118,10 @@ export const handleAuthError = (error: FirebaseError): AuthError => {
 
 // Check if error is a Firebase error
 export const isFirebaseError = (error: any): error is FirebaseError => {
-  return error && typeof error.code === 'string' && typeof error.message === 'string';
+  return error && 
+         error.constructor?.name === 'FirebaseError' &&
+         typeof error.code === 'string' && 
+         typeof error.message === 'string';
 };
 
 // Log Firebase errors for debugging

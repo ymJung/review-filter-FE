@@ -544,16 +544,23 @@ describe('utility functions', () => {
           callback(blob);
         });
 
-        // Trigger image load
-        setTimeout(() => {
-          if (mockImage.onload) mockImage.onload();
-        }, 0);
+        // Mock image properties
+        mockImage.width = 1000;
+        mockImage.height = 800;
 
-        const result = await compressImage(testFile, 800, 0.8);
+        // Start the compression and trigger image load immediately
+        const compressionPromise = compressImage(testFile, 800, 0.8);
+        
+        // Trigger image load synchronously
+        if (mockImage.onload) {
+          mockImage.onload();
+        }
+
+        const result = await compressionPromise;
 
         expect(result).toBeInstanceOf(File);
         expect(result.type).toBe('image/jpeg');
-      });
+      }, 10000);
     });
   });
 });

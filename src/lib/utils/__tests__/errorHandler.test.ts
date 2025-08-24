@@ -27,7 +27,7 @@ describe('errorHandler utilities', () => {
   });
 
   describe('processError', () => {
-    it('should process AppError correctly', () => {
+    it('should process AuthError correctly', () => {
       const error = new AuthError('Authentication failed', 'AUTH_FAILED');
       const result = processError(error);
 
