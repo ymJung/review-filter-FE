@@ -220,7 +220,6 @@ firebase deploy --only firestore:rules
 
 ### 권장 모니터링 도구
 - Vercel Analytics (기본 제공)
-- Google Analytics (선택사항)
 - Sentry (에러 추적)
 - Uptime Robot (가동시간 모니터링)
 

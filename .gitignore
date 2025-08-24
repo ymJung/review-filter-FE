@@ -41,3 +41,4 @@ firestore-export-*/
 *-firebase-adminsdk-*.json
 service-account-*.json
 yh-review-filter-firebase-adminsdk.json
+review-filter-client_secret.apps.googleusercontent.com.json

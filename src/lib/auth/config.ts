@@ -1,6 +1,6 @@
-import { 
-  GoogleAuthProvider, 
-  signInWithPopup, 
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User as FirebaseUser,
@@ -12,7 +12,7 @@ import { SocialProvider } from '@/types';
 // Custom OAuth providers for Kakao and Naver
 class KakaoAuthProvider {
   providerId = 'kakao.com';
-  
+
   constructor() {
     // Kakao OAuth configuration will be handled via custom implementation
   }
@@ -20,7 +20,7 @@ class KakaoAuthProvider {
 
 class NaverAuthProvider {
   providerId = 'naver.com';
-  
+
   constructor() {
     // Naver OAuth configuration will be handled via custom implementation
   }
@@ -34,6 +34,9 @@ export const naverProvider = new NaverAuthProvider();
 // Configure Google provider
 googleProvider.addScope('email');
 googleProvider.addScope('profile');
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
 
 // Auth state observer
 export const onAuthStateChange = (callback: (user: FirebaseUser | null) => void) => {

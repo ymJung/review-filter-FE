@@ -2,7 +2,6 @@
  * Performance monitoring utilities
  */
 
-import { analytics, trackPerformance } from './analytics';
 import { log } from './logger';
 
 export interface PerformanceMetric {
@@ -33,7 +32,6 @@ class PerformanceMonitor {
           const lastEntry = entries[entries.length - 1] as any;
           if (lastEntry) {
             this.recordMetric('LCP', lastEntry.startTime, 'ms', 'core-web-vitals');
-            trackPerformance('lcp', lastEntry.startTime);
           }
         });
         lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
@@ -44,7 +42,6 @@ class PerformanceMonitor {
           const entries = list.getEntries();
           entries.forEach((entry: any) => {
             this.recordMetric('FID', entry.processingStart - entry.startTime, 'ms', 'core-web-vitals');
-            trackPerformance('fid', entry.processingStart - entry.startTime);
           });
         });
         fidObserver.observe({ entryTypes: ['first-input'] });
@@ -60,7 +57,6 @@ class PerformanceMonitor {
             }
           });
           this.recordMetric('CLS', clsValue, 'score', 'core-web-vitals');
-          trackPerformance('cls', clsValue);
         });
         clsObserver.observe({ entryTypes: ['layout-shift'] });
         this.observers.push(clsObserver);
@@ -72,9 +68,6 @@ class PerformanceMonitor {
             this.recordMetric('TTFB', entry.responseStart - entry.requestStart, 'ms', 'navigation');
             this.recordMetric('DOM_LOAD', entry.domContentLoadedEventEnd - entry.domContentLoadedEventStart, 'ms', 'navigation');
             this.recordMetric('LOAD_COMPLETE', entry.loadEventEnd - entry.loadEventStart, 'ms', 'navigation');
-            
-            trackPerformance('ttfb', entry.responseStart - entry.requestStart);
-            trackPerformance('dom_load', entry.domContentLoadedEventEnd - entry.domContentLoadedEventStart);
           });
         });
         navigationObserver.observe({ entryTypes: ['navigation'] });
@@ -119,17 +112,9 @@ class PerformanceMonitor {
     }
 
     log.info(`Performance metric: ${name} = ${value}${unit}`, 'performance', { context });
-
-    // Send critical metrics to analytics
-    if (this.isCriticalMetric(name)) {
-      trackPerformance(name.toLowerCase(), value, unit);
-    }
   }
 
-  private isCriticalMetric(name: string): boolean {
-    const criticalMetrics = ['LCP', 'FID', 'CLS', 'TTFB'];
-    return criticalMetrics.includes(name);
-  }
+
 
   // Measure function execution time
   async measureAsync<T>(name: string, fn: () => Promise<T>, context?: string): Promise<T> {
@@ -269,7 +254,6 @@ export const withApiPerformance = async <T>(
     const duration = performance.now() - startTime;
     
     performanceMonitor.recordMetric(`API_${cleanEndpoint}`, duration, 'ms', 'api');
-    trackPerformance(`api_${cleanEndpoint.replace(/\//g, '_')}`, duration);
     
     return result;
   } catch (error) {
