@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Exclude test files from build
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'mdx'],
+  
   // Image optimization
   images: {
     domains: ['firebasestorage.googleapis.com'],
@@ -38,6 +41,23 @@ const nextConfig = {
 
   // Webpack optimizations
   webpack: (config, { dev, isServer }) => {
+    // Exclude test files and functions folder from build
+    config.module.rules.push({
+      test: /\.(test|spec)\.(js|jsx|ts|tsx)$/,
+      loader: 'ignore-loader',
+    });
+    
+    // Exclude functions folder
+    config.module.rules.push({
+      test: /[\\/]functions[\\/]/,
+      loader: 'ignore-loader',
+    });
+    
+    // Also exclude from resolve
+    config.resolve = config.resolve || {};
+    config.resolve.alias = config.resolve.alias || {};
+    config.resolve.alias['functions'] = false;
+
     // Production optimizations
     if (!dev) {
       config.optimization = {

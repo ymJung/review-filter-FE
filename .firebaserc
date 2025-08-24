@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "yh-review-filter",
+    "production": "yh-review-filter",
+    "staging": "yh-review-filter-staging"
+  },
+  "targets": {
+    "yh-review-filter": {
+      "hosting": {
+        "production": [
+          "yh-review-filter"
+        ]
+      }
+    }
+  },
+  "etags": {},
+  "dataconnectEmulatorConfig": {}
+}
