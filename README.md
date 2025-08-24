@@ -207,17 +207,134 @@
 * Naver Developers: 소셜 로그인
 * OpenAI: 리뷰 요약 생성
 
-## 빌드
-```sh
-# 의존성 설치
-npm install
+## 개발 환경 설정
+
+### 빠른 시작
+```bash
+# 개발 환경 자동 설정
+npm run setup:dev
+
+# Firebase 에뮬레이터 시작 (별도 터미널)
+npm run emulators:start
+
 # 개발 서버 실행
 npm run dev
+```
+
+### 수동 설정
+```bash
+# 의존성 설치
+npm install
+
+# 환경 변수 설정
+cp .env.example .env.local
+# .env.local 파일을 편집하여 실제 값 입력
+
+# 개발 서버 실행
+npm run dev
+
 # 빌드
 npm run build
+
 # 프로덕션 실행
 npm start
 ```
+
+### 테스트
+```bash
+# 단위 테스트
+npm run test:unit
+
+# 통합 테스트
+npm run test:integration
+
+# E2E 테스트
+npm run test:e2e
+
+# 모든 테스트
+npm test
+```
+
+## 🚀 배포
+
+### 배포 전 준비사항
+
+#### 1. 환경 변수 설정
+다음 환경 변수들이 Vercel Dashboard에 설정되어 있어야 합니다:
+
+**Firebase 설정:**
+- `NEXT_PUBLIC_FIREBASE_API_KEY`
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `NEXT_PUBLIC_FIREBASE_APP_ID`
+- `FIREBASE_CLIENT_EMAIL`
+- `FIREBASE_PRIVATE_KEY`
+
+**소셜 로그인:**
+- `NEXT_PUBLIC_KAKAO_CLIENT_ID`
+- `NEXT_PUBLIC_NAVER_CLIENT_ID`
+
+**기타:**
+- `OPENAI_API_KEY`
+- `NODE_ENV=production`
+
+#### 2. Firebase 설정
+```bash
+# Firebase 프로젝트 설정
+firebase use production
+
+# 프로덕션용 보안 규칙 적용
+cp firestore.rules.prod firestore.rules
+
+# Firebase 규칙 및 인덱스 배포
+firebase deploy --only firestore:rules,storage:rules,firestore:indexes
+```
+
+### 자동 배포 (권장)
+```bash
+# 전체 배포 스크립트 실행
+./scripts/deploy.sh
+```
+
+이 스크립트는 다음 작업을 자동으로 수행합니다:
+- 환경 변수 검증
+- 테스트 실행
+- 애플리케이션 빌드
+- Firebase 규칙 및 인덱스 배포
+- Vercel 프로덕션 배포
+
+### 수동 배포
+```bash
+# 1. 빌드 테스트
+npm run build
+
+# 2. Firebase 배포
+firebase deploy --only firestore:rules,storage:rules,firestore:indexes
+
+# 3. Vercel 배포
+vercel --prod
+```
+
+### 배포 후 확인사항
+- [ ] 홈페이지 로딩 확인
+- [ ] 소셜 로그인 동작 확인
+- [ ] 리뷰/로드맵 작성 및 조회 확인
+- [ ] 관리자 기능 확인
+- [ ] 헬스체크 엔드포인트 확인: `/api/health`
+
+### 모니터링
+배포된 애플리케이션은 다음 엔드포인트를 통해 상태를 모니터링할 수 있습니다:
+- **전체 상태**: `/api/health`
+- **Firebase 연결**: `/api/health/firebase`
+- **OpenAI 연결**: `/api/health/openai`
+
+### 문제 해결
+배포 관련 문제가 발생하면 다음 문서들을 참조하세요:
+- [배포 체크리스트](./DEPLOYMENT_CHECKLIST.md) - 단계별 배포 가이드
+- [배포 가이드](./docs/DEPLOYMENT.md) - 상세 배포 문서
+- [테스트 및 배포 가이드](./TESTING_DEPLOYMENT_GUIDE.md) - 테스트 방법
 
 ## 아키텍쳐
 ### 기술 스택
@@ -262,9 +379,17 @@ npm start
 - [x] 기본 UI (2/2) ✅
 - [x] 핵심 기능 (6/6) ✅
 - [x] 고급 기능 (3/3) ✅
-- [x] 품질 보장 (1/6) 🚧
-- [ ] 배포 및 운영 (0/2)
+- [x] 품질 보장 (6/6) ✅
+- [x] 배포 및 운영 (2/2) ✅
 
-**전체 진행률: 16/23 (69.6%)**
+**전체 진행률: 23/23 (100%) 🎉**
+
+### 🎯 배포 준비 완료
+프로젝트가 프로덕션 배포 준비를 완료했습니다:
+- ✅ 빌드 오류 수정 완료
+- ✅ TypeScript 타입 안정성 확보
+- ✅ 프로덕션용 보안 규칙 준비
+- ✅ 자동 배포 스크립트 구성
+- ✅ 모니터링 및 헬스체크 시스템 구축
 
 각 작업을 완료할 때마다 위 체크리스트를 업데이트하여 진행 상황을 추적할 수 있습니다.

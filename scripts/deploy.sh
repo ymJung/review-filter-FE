@@ -59,6 +59,12 @@ build_app() {
 deploy_firebase() {
     echo "🔥 Deploying Firebase configuration..."
     
+    # Apply production rules
+    if [ -f "firestore.rules.prod" ]; then
+        echo "📋 Applying production Firestore rules..."
+        cp firestore.rules.prod firestore.rules
+    fi
+    
     # Deploy Firestore rules
     firebase deploy --only firestore:rules --project $NEXT_PUBLIC_FIREBASE_PROJECT_ID
     
