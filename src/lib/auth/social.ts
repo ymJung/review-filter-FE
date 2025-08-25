@@ -1,7 +1,7 @@
-import { 
-  signInWithPopup, 
+import {
+  signInWithPopup,
   signInWithCustomToken,
-  UserCredential 
+  UserCredential
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 import { googleProvider } from './config';
@@ -61,22 +61,37 @@ export const initNaverSDK = (): Promise<void> => {
 // Google sign in
 export const signInWithGoogle = async (): Promise<UserCredential> => {
   try {
+    if (!auth) {
+      throw new AuthError('Firebase Auth가 초기화되지 않았습니다.', 'AUTH_NOT_INITIALIZED');
+    }
+    
+    console.log('Starting Google sign in...');
+    console.log('Auth object:', auth);
+    console.log('Google provider:', googleProvider);
+    
     const result = await signInWithPopup(auth, googleProvider);
+    console.log('Google sign in successful:', result);
     return result;
   } catch (error: any) {
+    console.error('Google sign in error details:', {
+      code: error.code,
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
     throw handleAuthError(error);
   }
 };
 
 // Kakao sign in
-export const signInWithKakao = async (): Promise<{ 
-  accessToken: string; 
-  profile: any; 
-  provider: 'kakao' 
+export const signInWithKakao = async (): Promise<{
+  accessToken: string;
+  profile: any;
+  provider: 'kakao'
 }> => {
   try {
     await initKakaoSDK();
-    
+
     return new Promise((resolve, reject) => {
       window.Kakao.Auth.login({
         success: async (authObj: any) => {
@@ -117,7 +132,7 @@ export const signInWithNaver = async (): Promise<{
 }> => {
   try {
     await initNaverSDK();
-    
+
     return new Promise((resolve, reject) => {
       const naverLogin = new (window as any).naver.LoginWithNaverId({
         clientId: process.env.NEXT_PUBLIC_NAVER_CLIENT_ID,
@@ -125,9 +140,9 @@ export const signInWithNaver = async (): Promise<{
         isPopup: true,
         loginButton: { color: 'green', type: 3, height: 40 }
       });
-      
+
       naverLogin.init();
-      
+
       // Override success callback
       naverLogin.getLoginStatus((status: boolean) => {
         if (status) {
@@ -147,7 +162,7 @@ export const signInWithNaver = async (): Promise<{
           reject(new AuthError('네이버 로그인에 실패했습니다.', 'NAVER_AUTH_ERROR'));
         }
       });
-      
+
       // Trigger login
       naverLogin.login();
     });
@@ -187,6 +202,9 @@ export const createCustomToken = async (
 // Sign in with custom token
 export const signInWithCustomTokenAuth = async (customToken: string): Promise<UserCredential> => {
   try {
+    if (!auth) {
+      throw new AuthError('Firebase Auth가 초기화되지 않았습니다.', 'AUTH_NOT_INITIALIZED');
+    }
     const result = await signInWithCustomToken(auth, customToken);
     return result;
   } catch (error: any) {
