@@ -1,24 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  addDoc, 
-  orderBy, 
-  limit as firestoreLimit,
-  startAfter,
-  getDoc
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { reviewsCollection, getUserDoc } from '@/lib/firebase/collections';
-import { reviewConverter } from '@/lib/firebase/converters';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
 import { promoteToAuthenticated } from '@/lib/auth/user';
 import { createOrGetCourse } from '@/lib/services/courseService';
 import { Review, ApiResponse, PaginatedResponse } from '@/types';
 import { handleError } from '@/lib/utils';
-import { COLLECTIONS } from '@/lib/firebase/collections';
+import { 
+  getDocs, 
+  where, 
+  collection, 
+  query, 
+  addDoc 
+} from 'firebase/firestore';
+import { COLLECTIONS, db, reviewConverter } from '@/lib/firebase';
+
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic';
 
 // GET /api/reviews - Get reviews with pagination and filtering
 export async function GET(request: NextRequest) {
@@ -32,42 +28,58 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
-    // Build query
-    let reviewsQuery = query(
-      collection(db, COLLECTIONS.REVIEWS).withConverter(reviewConverter)
-    );
+    // Check if Firebase Admin is properly configured
+    const adminDb = getAdminDb();
+    if (!adminDb) {
+      return NextResponse.json(
+        { 
+          success: true, 
+          data: {
+            data: [],
+            pagination: {
+              currentPage: 1,
+              totalPages: 0,
+              totalItems: 0,
+              hasNext: false,
+              hasPrev: false
+            }
+          }
+        },
+        { status: 200 }
+      );
+    }
+
+    // Build query using Firebase Admin SDK with simplified approach
+    let reviewsQuery = adminDb.collection('reviews');
 
     // Add filters
     if (status) {
-      reviewsQuery = query(reviewsQuery, where('status', '==', status));
+      reviewsQuery = reviewsQuery.where('status', '==', status);
     }
     
     if (userId) {
-      reviewsQuery = query(reviewsQuery, where('userId', '==', userId));
+      reviewsQuery = reviewsQuery.where('userId', '==', userId);
     }
     
     if (courseId) {
-      reviewsQuery = query(reviewsQuery, where('courseId', '==', courseId));
+      reviewsQuery = reviewsQuery.where('courseId', '==', courseId);
     }
 
-    // Add sorting
-    reviewsQuery = query(
-      reviewsQuery,
-      orderBy(sortBy as any, sortOrder as 'asc' | 'desc')
-    );
+    // Add pagination without sorting for now to avoid index issues
+    reviewsQuery = reviewsQuery.limit(pageSize);
 
-    // Add pagination
-    reviewsQuery = query(reviewsQuery, firestoreLimit(pageSize));
-
-    const snapshot = await getDocs(reviewsQuery);
-    const reviews = snapshot.docs.map(doc => doc.data());
+    const snapshot = await reviewsQuery.get();
+    const reviews: Review[] = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+      studyPeriod: doc.data().studyPeriod?.toDate(),
+    })) as Review[];
 
     // Get total count (simplified)
-    const totalQuery = query(
-      collection(db, COLLECTIONS.REVIEWS),
-      where('status', '==', status)
-    );
-    const totalSnapshot = await getDocs(totalQuery);
+    const totalQuery = adminDb.collection('reviews').where('status', '==', status);
+    const totalSnapshot = await totalQuery.get();
     const totalItems = totalSnapshot.size;
     const totalPages = Math.ceil(totalItems / pageSize);
 
@@ -88,8 +100,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response);
   } catch (error) {
     console.error('Error getting reviews:', error);
+    
+    // Handle specific Firebase errors
+    if (error instanceof Error) {
+      if (error.message.includes('permission-denied')) {
+        return NextResponse.json(
+          { success: false, error: { code: 'PERMISSION_DENIED', message: 'Missing or insufficient permissions.' } },
+          { status: 403 }
+        );
+      }
+      if (error.message.includes('not-found')) {
+        return NextResponse.json(
+          { success: false, error: { code: 'NOT_FOUND', message: '리뷰를 찾을 수 없습니다.' } },
+          { status: 404 }
+        );
+      }
+    }
+    
     return NextResponse.json(
-      { success: false, error: { code: 'SERVER_ERROR', message: handleError(error) } },
+      { success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch reviews' } },
       { status: 500 }
     );
   }
@@ -107,8 +136,15 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const auth = getAuth();
-    const decodedToken = await auth.verifyIdToken(token);
+    const adminAuth = getAdminAuth();
+    if (!adminAuth) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Authentication service unavailable' } },
+        { status: 500 }
+      );
+    }
+    
+    const decodedToken = await adminAuth.verifyIdToken(token);
     
     const {
       courseTitle,

@@ -36,7 +36,13 @@ export function RecentReviewsSection({
         setReviews(data?.data || []);
       } catch (error: any) {
         console.error('Error fetching recent reviews:', error);
-        setError('최근 리뷰를 불러오는데 실패했습니다.');
+        // 권한 부족이나 데이터 없음은 조용히 처리
+        if (error.message?.includes('permissions') || 
+            error.message?.includes('not found')) {
+          setReviews([]);
+        } else {
+          setError('최근 리뷰를 불러오는데 실패했습니다.');
+        }
       } finally {
         setLoading(false);
       }

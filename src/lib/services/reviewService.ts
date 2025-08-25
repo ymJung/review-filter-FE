@@ -30,6 +30,14 @@ export const getReviews = async (params: {
     });
 
     if (!response.ok) {
+      if (response.status === 403) {
+        console.warn('Permission denied for reviews');
+        return { data: [], pagination: { currentPage: 1, totalPages: 0, totalItems: 0, hasNext: false, hasPrev: false } };
+      }
+      if (response.status === 404) {
+        console.warn('No reviews found');
+        return { data: [], pagination: { currentPage: 1, totalPages: 0, totalItems: 0, hasNext: false, hasPrev: false } };
+      }
       throw new Error('Failed to fetch reviews');
     }
 
@@ -37,7 +45,7 @@ export const getReviews = async (params: {
     return result.success ? result.data! : null;
   } catch (error) {
     console.error('Error fetching reviews:', error);
-    return null;
+    throw error;
   }
 };
 

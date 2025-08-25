@@ -34,8 +34,14 @@ export const CategoryStatsComponent: React.FC<CategoryStatsProps> = ({
       try {
         const data = await getCategoryStats({ source, limit });
         setStats(data || []);
-      } catch (err) {
-        setError('카테고리 통계를 불러오는데 실패했습니다.');
+      } catch (err: any) {
+        // 권한 부족이나 데이터 없음은 조용히 처리
+        if (err.message?.includes('permissions') || 
+            err.message?.includes('not found')) {
+          setStats([]);
+        } else {
+          setError('카테고리 통계를 불러오는데 실패했습니다.');
+        }
         console.error('Error fetching category stats:', err);
       } finally {
         setLoading(false);

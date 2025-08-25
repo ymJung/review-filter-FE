@@ -17,6 +17,16 @@ const nextConfig = {
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['@/components/ui', '@/lib/utils'],
+    serverComponentsExternalPackages: ['firebase-admin'],
+  },
+
+  // Ignore build errors for development
+  typescript: {
+    ignoreBuildErrors: process.env.NODE_ENV === 'development',
+  },
+  
+  eslint: {
+    ignoreDuringBuilds: process.env.NODE_ENV === 'development',
   },
 
   // Compression

@@ -140,14 +140,22 @@ export const getCategoryStats = async (params: {
     });
 
     if (!response.ok) {
+      if (response.status === 403) {
+        console.warn('Permission denied for category stats');
+        return [];
+      }
+      if (response.status === 404) {
+        console.warn('No category stats found');
+        return [];
+      }
       throw new Error('Failed to fetch category stats');
     }
 
     const result: ApiResponse<CategoryStats[]> = await response.json();
-    return result.success ? result.data! : null;
+    return result.success ? result.data! : [];
   } catch (error) {
     console.error('Error fetching category stats:', error);
-    return null;
+    throw error;
   }
 };
 

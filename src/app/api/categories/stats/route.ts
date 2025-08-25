@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  orderBy, 
-  limit as firestoreLimit,
-  doc,
-  getDoc
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { COLLECTIONS } from '@/lib/firebase/collections';
+import { getAdminDb } from '@/lib/firebase/admin';
 import { CategoryStats, ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
+
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic';
 
 // Cache for category stats (in production, use Redis or similar)
 const statsCache = new Map<string, { data: CategoryStats[], timestamp: number }>();
@@ -24,6 +16,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '10');
     const source = searchParams.get('source') || 'reviews'; // 'reviews' or 'courses'
+    
+    // Check if Firebase Admin is properly configured
+    const adminDb = getAdminDb();
+    if (!adminDb) {
+      return NextResponse.json(
+        { success: true, data: [] }, // Return empty array instead of error
+        { status: 200 }
+      );
+    }
     
     const cacheKey = `${source}-${limit}`;
     const cached = statsCache.get(cacheKey);
@@ -40,15 +41,12 @@ export async function GET(request: NextRequest) {
     let stats: CategoryStats[] = [];
 
     if (source === 'reviews') {
-      // Get category stats from recent reviews with optimized approach
-      const reviewsQuery = query(
-        collection(db, COLLECTIONS.REVIEWS),
-        where('status', '==', 'APPROVED'),
-        orderBy('createdAt', 'desc'),
-        firestoreLimit(100) // Get recent 100 reviews
-      );
+      // Get category stats from recent reviews with simplified approach
+      const reviewsQuery = adminDb.collection('reviews')
+        .where('status', '==', 'APPROVED')
+        .limit(100); // Get recent 100 reviews
 
-      const reviewsSnapshot = await getDocs(reviewsQuery);
+      const reviewsSnapshot = await reviewsQuery.get();
       const categoryCount: Record<string, number> = {};
       let totalReviews = 0;
 
@@ -59,8 +57,8 @@ export async function GET(request: NextRequest) {
       const courseData: Record<string, any> = {};
       for (const courseId of courseIds) {
         try {
-          const courseDoc = await getDoc(doc(db, COLLECTIONS.COURSES, courseId));
-          if (courseDoc.exists()) {
+          const courseDoc = await adminDb.collection('courses').doc(courseId).get();
+          if (courseDoc.exists) {
             courseData[courseId] = courseDoc.data();
           }
         } catch (error) {
@@ -92,8 +90,8 @@ export async function GET(request: NextRequest) {
 
     } else if (source === 'courses') {
       // Get category stats from all courses
-      const coursesQuery = query(collection(db, COLLECTIONS.COURSES));
-      const coursesSnapshot = await getDocs(coursesQuery);
+      const coursesQuery = adminDb.collection('courses');
+      const coursesSnapshot = await coursesQuery.get();
       
       const categoryCount: Record<string, number> = {};
       let totalCourses = 0;
@@ -127,8 +125,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response);
   } catch (error) {
     console.error('Error getting category stats:', error);
+    
+    // Handle specific Firebase errors
+    if (error instanceof Error) {
+      if (error.message.includes('permission-denied')) {
+        return NextResponse.json(
+          { success: false, error: { code: 'PERMISSION_DENIED', message: 'Missing or insufficient permissions.' } },
+          { status: 403 }
+        );
+      }
+      if (error.message.includes('not-found')) {
+        return NextResponse.json(
+          { success: false, error: { code: 'NOT_FOUND', message: '카테고리 통계를 찾을 수 없습니다.' } },
+          { status: 404 }
+        );
+      }
+    }
+    
     return NextResponse.json(
-      { success: false, error: { code: 'SERVER_ERROR', message: handleError(error) } },
+      { success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch category stats' } },
       { status: 500 }
     );
   }

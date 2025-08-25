@@ -46,8 +46,13 @@ export function ReviewSummary({
       setSummary(recentSummary);
     } catch (error: any) {
       console.error('Error loading recent summary:', error);
-      // 최근 요약이 없으면 에러로 처리하지 않음
-      if (!error.message?.includes('요약이 없습니다')) {
+      // 권한 부족이나 요약이 없는 경우는 에러로 처리하지 않음
+      if (error.message?.includes('permissions') || 
+          error.message?.includes('요약이 없습니다') ||
+          error.message?.includes('not found')) {
+        // 조용히 처리 - 요약이 없는 상태로 유지
+        setSummary(null);
+      } else {
         setError(error.message || '요약을 불러오는데 실패했습니다.');
       }
     } finally {
