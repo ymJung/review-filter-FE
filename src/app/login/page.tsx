@@ -1,29 +1,45 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { GoogleLoginButton, KakaoLoginButton, NaverLoginButton } from '@/components/auth/SocialLoginButton';
 import { useAuth } from '@/components/auth/AuthProvider';
 
 export default function LoginPage() {
   const [error, setError] = useState<string>('');
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
   // Redirect if already authenticated
-  if (isAuthenticated) {
-    router.push('/');
-    return null;
-  }
+  useEffect(() => {
+    if (!loading && isAuthenticated && !isRedirecting) {
+      console.log('User is authenticated, redirecting to home...');
+      setIsRedirecting(true);
+      // Use setTimeout to ensure navigation happens outside of render cycle
+      setTimeout(() => {
+        router.push('/');
+      }, 0);
+    }
+  }, [isAuthenticated, loading, router, isRedirecting]);
 
   const handleLoginSuccess = () => {
     setError('');
-    // Navigation is handled by the login button component
+    // Navigation is handled by auth state change
   };
 
   const handleLoginError = (errorMessage: string) => {
     setError(errorMessage);
   };
+
+  // Show loading while checking auth state or redirecting
+  if (loading || isRedirecting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -74,6 +90,8 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+      
+
     </div>
   );
 }

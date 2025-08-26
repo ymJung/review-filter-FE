@@ -114,6 +114,15 @@ export const SocialLoginButton: React.FC<SocialLoginButtonProps> = ({
             name: kakaoResult.profile.kakao_account?.profile?.nickname,
             accessToken: kakaoResult.accessToken,
           });
+          // Create or get user in Firestore for Kakao
+          await getOrCreateUser(
+            result.user,
+            'kakao' as SocialProvider,
+            kakaoResult.profile.id.toString(),
+            {
+              nickname: kakaoResult.profile.kakao_account?.profile?.nickname || undefined,
+            }
+          );
           break;
           
         case 'naver':
@@ -131,11 +140,12 @@ export const SocialLoginButton: React.FC<SocialLoginButtonProps> = ({
           throw new Error('Unsupported provider');
       }
 
-      // Refresh user data in context
-      await refreshUser();
-      
+      // Call success callback immediately
+      console.log('Calling onSuccess callback...');
       onSuccess?.();
-      router.push('/');
+      
+      // Don't navigate here - let AuthProvider handle it through auth state change
+      console.log('Login successful, waiting for auth state change...');
       
     } catch (error) {
       const errorMessage = handleError(error);

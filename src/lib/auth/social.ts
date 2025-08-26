@@ -7,6 +7,7 @@ import { auth } from '@/lib/firebase/config';
 import { googleProvider } from './config';
 import { SocialProvider, AuthError } from '@/types';
 import { handleAuthError } from '@/lib/firebase/errors';
+import { KAKAO_CONFIG, validateKakaoDomain, checkKakaoSDKStatus } from './kakao-config';
 
 // Kakao SDK types
 declare global {
@@ -23,21 +24,60 @@ export const initKakaoSDK = (): Promise<void> => {
       return;
     }
 
+    const clientId = process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
+    if (!clientId) {
+      reject(new Error('Kakao Client ID is not configured'));
+      return;
+    }
+
     if (window.Kakao) {
       if (!window.Kakao.isInitialized()) {
-        window.Kakao.init(process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID);
+        try {
+          window.Kakao.init(clientId);
+          console.log('Kakao SDK initialized successfully');
+        } catch (error) {
+          console.error('Failed to initialize Kakao SDK:', error);
+          reject(error);
+          return;
+        }
       }
       resolve();
       return;
     }
 
+    // Check if script is already loading
+    const existingScript = document.querySelector('script[src*="kakao.js"]');
+    if (existingScript) {
+      existingScript.addEventListener('load', () => {
+        try {
+          window.Kakao.init(clientId);
+          console.log('Kakao SDK initialized successfully');
+          resolve();
+        } catch (error) {
+          console.error('Failed to initialize Kakao SDK:', error);
+          reject(error);
+        }
+      });
+      return;
+    }
+
     const script = document.createElement('script');
     script.src = 'https://developers.kakao.com/sdk/js/kakao.js';
+    script.async = true;
     script.onload = () => {
-      window.Kakao.init(process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID);
-      resolve();
+      try {
+        window.Kakao.init(clientId);
+        console.log('Kakao SDK loaded and initialized successfully');
+        resolve();
+      } catch (error) {
+        console.error('Failed to initialize Kakao SDK after loading:', error);
+        reject(error);
+      }
     };
-    script.onerror = () => reject(new Error('Failed to load Kakao SDK'));
+    script.onerror = (error) => {
+      console.error('Failed to load Kakao SDK script:', error);
+      reject(new Error('Failed to load Kakao SDK'));
+    };
     document.head.appendChild(script);
   });
 };
@@ -90,16 +130,37 @@ export const signInWithKakao = async (): Promise<{
   provider: 'kakao'
 }> => {
   try {
+    // 도메인 검증
+    if (!validateKakaoDomain()) {
+      throw new AuthError('허용되지 않은 도메인입니다.', 'KAKAO_DOMAIN_ERROR');
+    }
+
     await initKakaoSDK();
 
+    // SDK 상태 확인
+    const sdkStatus = checkKakaoSDKStatus();
+    if (!sdkStatus.loaded || !sdkStatus.initialized) {
+      throw new AuthError(`카카오 SDK 오류: ${sdkStatus.error}`, 'KAKAO_SDK_ERROR');
+    }
+
     return new Promise((resolve, reject) => {
+      // 타임아웃 설정 (30초)
+      const timeout = setTimeout(() => {
+        reject(new AuthError('카카오 로그인 시간이 초과되었습니다.', 'KAKAO_TIMEOUT'));
+      }, 30000);
+
       window.Kakao.Auth.login({
+        ...KAKAO_CONFIG,
         success: async (authObj: any) => {
+          clearTimeout(timeout);
           try {
+            console.log('Kakao auth success:', authObj);
+            
             // Get user profile
             window.Kakao.API.request({
               url: '/v2/user/me',
               success: (profile: any) => {
+                console.log('Kakao profile success:', profile);
                 resolve({
                   accessToken: authObj.access_token,
                   profile,
@@ -107,19 +168,33 @@ export const signInWithKakao = async (): Promise<{
                 });
               },
               fail: (error: any) => {
+                console.error('Kakao profile request failed:', error);
                 reject(new AuthError('카카오 프로필 조회에 실패했습니다.', 'KAKAO_PROFILE_ERROR'));
               }
             });
           } catch (error) {
+            console.error('Kakao login processing error:', error);
             reject(new AuthError('카카오 로그인 처리 중 오류가 발생했습니다.', 'KAKAO_LOGIN_ERROR'));
           }
         },
         fail: (error: any) => {
-          reject(new AuthError('카카오 로그인에 실패했습니다.', 'KAKAO_AUTH_ERROR'));
+          clearTimeout(timeout);
+          console.error('Kakao auth failed:', error);
+          
+          // 사용자가 취소한 경우
+          if (error && error.error === 'access_denied') {
+            reject(new AuthError('카카오 로그인이 취소되었습니다.', 'KAKAO_CANCELLED'));
+          } else {
+            reject(new AuthError('카카오 로그인에 실패했습니다.', 'KAKAO_AUTH_ERROR'));
+          }
         }
       });
     });
   } catch (error) {
+    console.error('Kakao SDK initialization error:', error);
+    if (error instanceof AuthError) {
+      throw error;
+    }
     throw new AuthError('카카오 SDK 초기화에 실패했습니다.', 'KAKAO_SDK_ERROR');
   }
 };
@@ -177,6 +252,7 @@ export const createCustomToken = async (
   socialData: any
 ): Promise<string> => {
   try {
+    console.log('Calling create-token API with:', { provider, socialData });
     const response = await fetch('/api/auth/create-token', {
       method: 'POST',
       headers: {
@@ -188,13 +264,20 @@ export const createCustomToken = async (
       }),
     });
 
+    console.log('Create-token API response status:', response.status);
+    
     if (!response.ok) {
-      throw new Error('Failed to create custom token');
+      const errorData = await response.text();
+      console.error('Create-token API error:', errorData);
+      throw new Error(`Failed to create custom token: ${response.status} ${errorData}`);
     }
 
-    const { customToken } = await response.json();
+    const responseData = await response.json();
+    console.log('Create-token API success:', responseData);
+    const { customToken } = responseData;
     return customToken;
   } catch (error) {
+    console.error('Create custom token error:', error);
     throw new AuthError('커스텀 토큰 생성에 실패했습니다.', 'CUSTOM_TOKEN_ERROR');
   }
 };
@@ -222,6 +305,7 @@ export const completeSocialLogin = async (
     const result = await signInWithCustomTokenAuth(customToken);
     return result;
   } catch (error) {
+    console.error('Complete social login error:', error);
     throw error;
   }
 };

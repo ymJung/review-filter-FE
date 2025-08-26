@@ -4,6 +4,8 @@ import './globals.css'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { ToastProvider } from '@/components/ui/Toast'
+import { KakaoSDKProvider } from '@/components/auth/KakaoSDKProvider'
+import Script from 'next/script'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -56,11 +58,19 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={inter.className}>
+        {/* 카카오 SDK 미리 로드 */}
+        <Script
+          src="https://developers.kakao.com/sdk/js/kakao.js"
+          strategy="beforeInteractive"
+        />
+        
         <ErrorBoundary>
           <ToastProvider>
-            <AuthProvider>
-              {children}
-            </AuthProvider>
+            <KakaoSDKProvider>
+              <AuthProvider>
+                {children}
+              </AuthProvider>
+            </KakaoSDKProvider>
           </ToastProvider>
         </ErrorBoundary>
       </body>

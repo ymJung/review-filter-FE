@@ -15,6 +15,17 @@ import { User, SocialProvider, UserRole } from '@/types';
 import { generateRandomNickname } from '@/lib/utils';
 import { USER_ROLES } from '@/lib/constants';
 
+// Helper function to remove undefined values
+const removeUndefinedValues = (obj: any): any => {
+  const cleaned: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      cleaned[key] = value;
+    }
+  }
+  return cleaned;
+};
+
 // Create new user in Firestore
 export const createUser = async (
   firebaseUser: FirebaseUser,
@@ -25,14 +36,17 @@ export const createUser = async (
   try {
     const userRef = getUserDoc(firebaseUser.uid).withConverter(userConverter);
     
+    // Clean additional data to remove undefined values
+    const cleanedAdditionalData = additionalData ? removeUndefinedValues(additionalData) : {};
+    
     const userData: Omit<User, 'id'> = {
       socialProvider: provider,
       socialId,
-      nickname: additionalData?.nickname || generateRandomNickname(),
+      nickname: cleanedAdditionalData.nickname || generateRandomNickname(),
       role: USER_ROLES.LOGIN_NOT_AUTH as UserRole,
       createdAt: new Date(),
       updatedAt: new Date(),
-      ...additionalData
+      ...cleanedAdditionalData
     };
 
     await setDoc(userRef, userData as User);
