@@ -233,60 +233,81 @@ export const signInWithNaver = async (): Promise<{
         reject(new AuthError('네이버 로그인 시간이 초과되었습니다.', 'NAVER_TIMEOUT'));
       }, 30000);
 
-      // Create Naver login instance WITHOUT button configuration for programmatic login
-      const naverLogin = new (window as any).naver.LoginWithNaverId({
-        clientId: process.env.NEXT_PUBLIC_NAVER_CLIENT_ID,
-        callbackUrl: `${window.location.origin}/auth/naver/callback`,
-        isPopup: true
-      });
+      // Create popup window for Naver login
+      const popupWidth = 480;
+      const popupHeight = 640;
+      const left = (window.screen.width - popupWidth) / 2;
+      const top = (window.screen.height - popupHeight) / 2;
+      
+      const popup = window.open(
+        `https://nid.naver.com/oauth2.0/authorize?response_type=token&client_id=${process.env.NEXT_PUBLIC_NAVER_CLIENT_ID}&redirect_uri=${encodeURIComponent(`${window.location.origin}/auth/naver/callback`)}&state=${Math.random().toString(36).substring(2, 15)}`,
+        'naver_login',
+        `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=yes,scrollbars=yes,status=yes`
+      );
 
-      // Set up callback for successful login
-      (window as any).handleNaverLoginCallback = (data: any) => {
+      if (!popup) {
         clearTimeout(timeout);
-        
-        if (data && data.accessToken) {
-          // Get user profile using the access token
-          fetch('https://openapi.naver.com/v1/nid/me', {
-            headers: {
-              'Authorization': `Bearer ${data.accessToken}`
-            }
-          })
-          .then(response => response.json())
-          .then(profileData => {
-            if (profileData.resultcode === '00') {
-              resolve({
-                accessToken: data.accessToken,
-                profile: profileData.response,
-                provider: 'naver'
+        reject(new AuthError('팝업 차단이 감지되었습니다. 팝업 차단을 해제해주세요.', 'NAVER_POPUP_BLOCKED'));
+        return;
+      }
+
+      // Listen for messages from the popup
+      const handleMessage = (event: MessageEvent) => {
+        // Check if the message is from our domain
+        if (event.origin !== window.location.origin) {
+          return;
+        }
+
+        // Check if this is our Naver login message
+        if (event.data && event.data.type) {
+          switch (event.data.type) {
+            case 'NAVER_LOGIN_SUCCESS':
+              clearTimeout(timeout);
+              window.removeEventListener('message', handleMessage);
+              
+              // Get user profile using the access token
+              fetch('https://openapi.naver.com/v1/nid/me', {
+                headers: {
+                  'Authorization': `Bearer ${event.data.accessToken}`
+                }
+              })
+              .then(response => response.json())
+              .then(profileData => {
+                if (profileData.resultcode === '00') {
+                  resolve({
+                    accessToken: event.data.accessToken,
+                    profile: profileData.response,
+                    provider: 'naver'
+                  });
+                } else {
+                  reject(new AuthError('네이버 프로필 조회에 실패했습니다.', 'NAVER_PROFILE_ERROR'));
+                }
+              })
+              .catch(error => {
+                reject(new AuthError('네이버 프로필 조회 중 오류가 발생했습니다.', 'NAVER_PROFILE_ERROR'));
               });
-            } else {
-              reject(new AuthError('네이버 프로필 조회에 실패했습니다.', 'NAVER_PROFILE_ERROR'));
-            }
-          })
-          .catch(error => {
-            reject(new AuthError('네이버 프로필 조회 중 오류가 발생했습니다.', 'NAVER_PROFILE_ERROR'));
-          });
-        } else {
-          reject(new AuthError('네이버 로그인에 실패했습니다.', 'NAVER_AUTH_ERROR'));
+              break;
+
+            case 'NAVER_LOGIN_ERROR':
+              clearTimeout(timeout);
+              window.removeEventListener('message', handleMessage);
+              reject(new AuthError('네이버 로그인에 실패했습니다.', 'NAVER_AUTH_ERROR'));
+              break;
+          }
         }
       };
 
-      // Set up callback for login error
-      (window as any).handleNaverLoginError = (error: any) => {
-        clearTimeout(timeout);
-        reject(new AuthError('네이버 로그인에 실패했습니다.', 'NAVER_AUTH_ERROR'));
-      };
+      window.addEventListener('message', handleMessage);
 
-      // Initialize the login
-      try {
-        naverLogin.init();
-        
-        // Trigger authorization directly
-        naverLogin.authorize();
-      } catch (initError) {
-        clearTimeout(timeout);
-        reject(new AuthError('네이버 로그인 초기화에 실패했습니다.', 'NAVER_INIT_ERROR'));
-      }
+      // Check if popup is closed
+      const checkPopup = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkPopup);
+          clearTimeout(timeout);
+          window.removeEventListener('message', handleMessage);
+          reject(new AuthError('로그인 창이 닫혔습니다.', 'NAVER_POPUP_CLOSED'));
+        }
+      }, 1000);
     });
   } catch (error) {
     throw new AuthError('네이버 SDK 초기화에 실패했습니다.', 'NAVER_SDK_ERROR');
