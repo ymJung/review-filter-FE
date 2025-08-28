@@ -60,22 +60,22 @@ const STORAGE_ERROR_MESSAGES: Record<string, string> = {
 // Convert Firebase error to user-friendly message
 export const getFirebaseErrorMessage = (error: FirebaseError): string => {
   const { code } = error;
-  
+
   // Check auth errors
   if (AUTH_ERROR_MESSAGES[code]) {
     return AUTH_ERROR_MESSAGES[code];
   }
-  
+
   // Check Firestore errors
   if (FIRESTORE_ERROR_MESSAGES[code]) {
     return FIRESTORE_ERROR_MESSAGES[code];
   }
-  
+
   // Check Storage errors
   if (STORAGE_ERROR_MESSAGES[code]) {
     return STORAGE_ERROR_MESSAGES[code];
   }
-  
+
   // Default message
   return '오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
 };
@@ -83,10 +83,10 @@ export const getFirebaseErrorMessage = (error: FirebaseError): string => {
 // Convert Firebase error to AppError
 export const convertFirebaseError = (error: FirebaseError): AppError => {
   const message = getFirebaseErrorMessage(error);
-  
+
   // Determine status code based on error type
   let statusCode = 500;
-  
+
   if (error.code.startsWith('auth/')) {
     if (error.code === 'auth/unauthenticated') {
       statusCode = 401;
@@ -106,7 +106,7 @@ export const convertFirebaseError = (error: FirebaseError): AppError => {
   } else if (error.code === 'invalid-argument') {
     statusCode = 400;
   }
-  
+
   return new AppError(message, error.code, statusCode);
 };
 
@@ -118,10 +118,10 @@ export const handleAuthError = (error: FirebaseError): AuthError => {
 
 // Check if error is a Firebase error
 export const isFirebaseError = (error: any): error is FirebaseError => {
-  return error && 
-         error.constructor?.name === 'FirebaseError' &&
-         typeof error.code === 'string' && 
-         typeof error.message === 'string';
+  return error &&
+    error.constructor?.name === 'FirebaseError' &&
+    typeof error.code === 'string' &&
+    typeof error.message === 'string';
 };
 
 // Log Firebase errors for debugging
@@ -143,7 +143,7 @@ export const isRetryableError = (error: FirebaseError): boolean => {
     'auth/network-request-failed',
     'storage/retry-limit-exceeded',
   ];
-  
+
   return retryableCodes.includes(error.code);
 };
 
@@ -154,25 +154,25 @@ export const retryWithBackoff = async <T>(
   baseDelay: number = 1000
 ): Promise<T> => {
   let lastError: Error;
-  
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await operation();
     } catch (error) {
       lastError = error as Error;
-      
+
       if (attempt === maxRetries) {
         break;
       }
-      
+
       if (isFirebaseError(error) && !isRetryableError(error)) {
         break;
       }
-      
+
       const delay = baseDelay * Math.pow(2, attempt);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
-  
+
   throw lastError!;
 };

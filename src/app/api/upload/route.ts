@@ -10,6 +10,14 @@ import { handleError } from '@/lib/utils';
 // POST /api/upload - Upload certification image
 export async function POST(request: NextRequest) {
   try {
+    // Check if Firebase services are initialized
+    if (!storage || !db) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase services not initialized' } },
+        { status: 500 }
+      );
+    }
+
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(

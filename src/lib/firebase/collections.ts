@@ -26,33 +26,41 @@ export const COLLECTIONS = {
   REVIEW_SUMMARIES: 'reviewSummaries',
 } as const;
 
-// Typed collection references
-export const usersCollection = collection(db, COLLECTIONS.USERS) as CollectionReference<User>;
-export const coursesCollection = collection(db, COLLECTIONS.COURSES) as CollectionReference<Course>;
-export const reviewsCollection = collection(db, COLLECTIONS.REVIEWS) as CollectionReference<Review>;
-export const reviewImagesCollection = collection(db, COLLECTIONS.REVIEW_IMAGES) as CollectionReference<ReviewImage>;
-export const commentsCollection = collection(db, COLLECTIONS.COMMENTS) as CollectionReference<Comment>;
-export const roadmapsCollection = collection(db, COLLECTIONS.ROADMAPS) as CollectionReference<Roadmap>;
-export const reviewSummariesCollection = collection(db, COLLECTIONS.REVIEW_SUMMARIES) as CollectionReference<ReviewSummary>;
+// Helper function to ensure db is initialized
+const getDb = () => {
+  if (!db) {
+    throw new Error('Firestore not initialized');
+  }
+  return db;
+};
+
+// Lazy-loaded collection references (functions that return collection references)
+export const getUsersCollection = () => collection(getDb(), COLLECTIONS.USERS) as CollectionReference<User>;
+export const getCoursesCollection = () => collection(getDb(), COLLECTIONS.COURSES) as CollectionReference<Course>;
+export const getReviewsCollection = () => collection(getDb(), COLLECTIONS.REVIEWS) as CollectionReference<Review>;
+export const getReviewImagesCollection = () => collection(getDb(), COLLECTIONS.REVIEW_IMAGES) as CollectionReference<ReviewImage>;
+export const getCommentsCollection = () => collection(getDb(), COLLECTIONS.COMMENTS) as CollectionReference<Comment>;
+export const getRoadmapsCollection = () => collection(getDb(), COLLECTIONS.ROADMAPS) as CollectionReference<Roadmap>;
+export const getReviewSummariesCollection = () => collection(getDb(), COLLECTIONS.REVIEW_SUMMARIES) as CollectionReference<ReviewSummary>;
 
 // Helper functions for document references
 export const getUserDoc = (userId: string): DocumentReference<User> => 
-  doc(usersCollection, userId);
+  doc(getUsersCollection(), userId);
 
 export const getCourseDoc = (courseId: string): DocumentReference<Course> => 
-  doc(coursesCollection, courseId);
+  doc(getCoursesCollection(), courseId);
 
 export const getReviewDoc = (reviewId: string): DocumentReference<Review> => 
-  doc(reviewsCollection, reviewId);
+  doc(getReviewsCollection(), reviewId);
 
 export const getReviewImageDoc = (imageId: string): DocumentReference<ReviewImage> => 
-  doc(reviewImagesCollection, imageId);
+  doc(getReviewImagesCollection(), imageId);
 
 export const getCommentDoc = (commentId: string): DocumentReference<Comment> => 
-  doc(commentsCollection, commentId);
+  doc(getCommentsCollection(), commentId);
 
 export const getRoadmapDoc = (roadmapId: string): DocumentReference<Roadmap> => 
-  doc(roadmapsCollection, roadmapId);
+  doc(getRoadmapsCollection(), roadmapId);
 
 export const getReviewSummaryDoc = (summaryId: string): DocumentReference<ReviewSummary> => 
-  doc(reviewSummariesCollection, summaryId);
+  doc(getReviewSummariesCollection(), summaryId);

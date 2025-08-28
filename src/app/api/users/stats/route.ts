@@ -10,6 +10,14 @@ import { COLLECTIONS } from '@/lib/firebase/collections';
 // GET /api/users/stats - Get current user statistics
 export async function GET(request: NextRequest) {
   try {
+    // Check if Firestore is initialized
+    if (!db) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { status: 500 }
+      );
+    }
+
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(

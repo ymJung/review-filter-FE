@@ -90,6 +90,25 @@ export const initNaverSDK = (): Promise<void> => {
       return;
     }
 
+    // Check if script is already loaded
+    const existingScript = document.querySelector('script[src*="naveridlogin_js_sdk"]');
+    if (existingScript) {
+      // Check if SDK is already available
+      if ((window as any).naver && (window as any).naver.LoginWithNaverId) {
+        resolve();
+        return;
+      }
+      
+      // Wait for script to load
+      existingScript.addEventListener('load', () => {
+        resolve();
+      });
+      existingScript.addEventListener('error', () => {
+        reject(new Error('Failed to load Naver SDK'));
+      });
+      return;
+    }
+
     const script = document.createElement('script');
     script.src = 'https://static.nid.naver.com/js/naveridlogin_js_sdk_2.0.2.js';
     script.onload = () => resolve();
@@ -209,37 +228,65 @@ export const signInWithNaver = async (): Promise<{
     await initNaverSDK();
 
     return new Promise((resolve, reject) => {
+      // Set up timeout
+      const timeout = setTimeout(() => {
+        reject(new AuthError('네이버 로그인 시간이 초과되었습니다.', 'NAVER_TIMEOUT'));
+      }, 30000);
+
+      // Create Naver login instance WITHOUT button configuration for programmatic login
       const naverLogin = new (window as any).naver.LoginWithNaverId({
         clientId: process.env.NEXT_PUBLIC_NAVER_CLIENT_ID,
         callbackUrl: `${window.location.origin}/auth/naver/callback`,
-        isPopup: true,
-        loginButton: { color: 'green', type: 3, height: 40 }
+        isPopup: true
       });
 
-      naverLogin.init();
-
-      // Override success callback
-      naverLogin.getLoginStatus((status: boolean) => {
-        if (status) {
-          const user = naverLogin.user;
-          resolve({
-            accessToken: naverLogin.accessToken.accessToken,
-            profile: {
-              id: user.getId(),
-              email: user.getEmail(),
-              name: user.getName(),
-              profileImage: user.getProfileImage(),
-              nickname: user.getNickName()
-            },
-            provider: 'naver'
+      // Set up callback for successful login
+      (window as any).handleNaverLoginCallback = (data: any) => {
+        clearTimeout(timeout);
+        
+        if (data && data.accessToken) {
+          // Get user profile using the access token
+          fetch('https://openapi.naver.com/v1/nid/me', {
+            headers: {
+              'Authorization': `Bearer ${data.accessToken}`
+            }
+          })
+          .then(response => response.json())
+          .then(profileData => {
+            if (profileData.resultcode === '00') {
+              resolve({
+                accessToken: data.accessToken,
+                profile: profileData.response,
+                provider: 'naver'
+              });
+            } else {
+              reject(new AuthError('네이버 프로필 조회에 실패했습니다.', 'NAVER_PROFILE_ERROR'));
+            }
+          })
+          .catch(error => {
+            reject(new AuthError('네이버 프로필 조회 중 오류가 발생했습니다.', 'NAVER_PROFILE_ERROR'));
           });
         } else {
           reject(new AuthError('네이버 로그인에 실패했습니다.', 'NAVER_AUTH_ERROR'));
         }
-      });
+      };
 
-      // Trigger login
-      naverLogin.login();
+      // Set up callback for login error
+      (window as any).handleNaverLoginError = (error: any) => {
+        clearTimeout(timeout);
+        reject(new AuthError('네이버 로그인에 실패했습니다.', 'NAVER_AUTH_ERROR'));
+      };
+
+      // Initialize the login
+      try {
+        naverLogin.init();
+        
+        // Trigger authorization directly
+        naverLogin.authorize();
+      } catch (initError) {
+        clearTimeout(timeout);
+        reject(new AuthError('네이버 로그인 초기화에 실패했습니다.', 'NAVER_INIT_ERROR'));
+      }
     });
   } catch (error) {
     throw new AuthError('네이버 SDK 초기화에 실패했습니다.', 'NAVER_SDK_ERROR');

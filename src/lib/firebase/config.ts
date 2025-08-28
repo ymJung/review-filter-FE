@@ -63,7 +63,7 @@ if (isConfigValid) {
     storage = getStorage(app);
     
     console.log('Firebase services initialized successfully');
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to initialize Firebase:', error);
     console.error('Error details:', {
       name: error.name,
@@ -88,7 +88,7 @@ if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true' && typeof window !=
     
     if (auth) {
       import('firebase/auth').then(({ connectAuthEmulator }) => {
-        connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+        connectAuthEmulator(auth!, 'http://localhost:9099', { disableWarnings: true });
         console.log('Connected to Auth emulator');
       }).catch(error => {
         console.warn('Failed to connect to Auth emulator:', error);

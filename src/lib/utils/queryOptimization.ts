@@ -53,6 +53,9 @@ export class OptimizedQueryBuilder<T> {
   private cacheTTL = 5 * 60 * 1000; // 5 minutes
 
   constructor(collectionPath: string) {
+    if (!db) {
+      throw new Error('Firestore not initialized');
+    }
     this.collectionRef = collection(db, collectionPath);
   }
 
@@ -273,6 +276,12 @@ export const fetchDocumentOptimized = async <T>(
   docId: string,
   useCache: boolean = true
 ): Promise<T | null> => {
+  // Check if Firestore is initialized
+  if (!db) {
+    console.warn('Firestore is not initialized');
+    return null;
+  }
+
   const cacheKey = `doc:${collectionPath}:${docId}`;
   
   if (useCache) {

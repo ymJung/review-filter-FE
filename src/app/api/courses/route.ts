@@ -1,21 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
 import { 
+  getDocs, 
+  where, 
   collection, 
   query, 
-  where, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  doc, 
-  orderBy, 
-  limit, 
-  startAfter,
-  getDoc,
-  increment
+  addDoc,
+  orderBy,
+  limit as firestoreLimit
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { coursesCollection, getCourseDoc } from '@/lib/firebase/collections';
+import { getCoursesCollection, getCourseDoc } from '@/lib/firebase/collections';
 import { courseConverter } from '@/lib/firebase/converters';
 import { Course, ApiResponse, PaginatedResponse } from '@/types';
 import { handleError } from '@/lib/utils';
@@ -24,6 +19,14 @@ import { COLLECTIONS } from '@/lib/firebase/collections';
 // GET /api/courses - Get courses with pagination and filtering
 export async function GET(request: NextRequest) {
   try {
+    // Check if Firestore is initialized
+    if (!db) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { status: 500 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('limit') || '10');
@@ -69,9 +72,9 @@ export async function GET(request: NextRequest) {
     if (offset > 0) {
       // For proper pagination, we'd need to implement cursor-based pagination
       // This is a simplified version
-      coursesQuery = query(coursesQuery, limit(pageSize));
+      coursesQuery = query(coursesQuery, firestoreLimit(pageSize));
     } else {
-      coursesQuery = query(coursesQuery, limit(pageSize));
+      coursesQuery = query(coursesQuery, firestoreLimit(pageSize));
     }
 
     const snapshot = await getDocs(coursesQuery);
@@ -110,6 +113,14 @@ export async function GET(request: NextRequest) {
 // POST /api/courses - Create or get existing course
 export async function POST(request: NextRequest) {
   try {
+    // Check if Firestore is initialized
+    if (!db) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { status: 500 }
+      );
+    }
+
     const { title, platform, instructor, category } = await request.json();
 
     if (!title || !platform) {

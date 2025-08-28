@@ -4,6 +4,16 @@ import { collection, limit, query, getDocs } from 'firebase/firestore';
 
 export async function GET() {
   try {
+    // Check if Firestore is initialized
+    if (!db) {
+      return NextResponse.json({
+        status: 'unhealthy',
+        service: 'firebase',
+        timestamp: new Date().toISOString(),
+        error: 'Firebase not initialized',
+      }, { status: 503 });
+    }
+
     // Test Firebase connection with a simple query
     const testQuery = query(collection(db, 'users'), limit(1));
     await getDocs(testQuery);

@@ -18,6 +18,14 @@ import { handleError } from '@/lib/utils';
 // GET /api/comments - Get comments for a review
 export async function GET(request: NextRequest) {
   try {
+    // Check if Firestore is initialized
+    if (!db) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { status: 500 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const reviewId = searchParams.get('reviewId');
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -58,9 +66,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/comments - Create new comment
+// POST /api/comments - Create a new comment
 export async function POST(request: NextRequest) {
   try {
+    // Check if Firestore is initialized
+    if (!db) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { status: 500 }
+      );
+    }
+
     // Check if Firebase Admin is properly initialized
     if (getApps().length === 0) {
       return NextResponse.json(

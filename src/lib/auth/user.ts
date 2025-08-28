@@ -9,7 +9,7 @@ import {
 import { User as FirebaseUser } from 'firebase/auth';
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/firebase/config';
-import { usersCollection, getUserDoc } from '@/lib/firebase/collections';
+import { getUsersCollection, getUserDoc } from '@/lib/firebase/collections';
 import { userConverter } from '@/lib/firebase/converters';
 import { User, SocialProvider, UserRole } from '@/types';
 import { generateRandomNickname } from '@/lib/utils';

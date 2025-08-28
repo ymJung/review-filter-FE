@@ -17,6 +17,14 @@ import { handleError } from '@/lib/utils';
 // POST /api/summaries/generate - Generate review summary using OpenAI
 export async function POST(request: NextRequest) {
   try {
+    // Check if Firestore is initialized
+    if (!db) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { status: 500 }
+      );
+    }
+
     const { category, platform, limit = 10 } = await request.json();
 
     // Build query for approved reviews

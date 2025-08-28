@@ -5,11 +5,11 @@ import { createOrGetCourse } from '@/lib/services/courseService';
 import { Review, ApiResponse, PaginatedResponse } from '@/types';
 import { handleError } from '@/lib/utils';
 import { 
-  getDocs, 
-  where, 
-  collection, 
-  query, 
-  addDoc 
+  addDoc,
+  collection,
+  query,
+  where,
+  getDocs
 } from 'firebase/firestore';
 import { COLLECTIONS, db, reviewConverter } from '@/lib/firebase';
 
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build query using Firebase Admin SDK with simplified approach
-    let reviewsQuery = adminDb.collection('reviews');
+    let reviewsQuery: any = adminDb.collection('reviews');
 
     // Add filters
     if (status) {
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     reviewsQuery = reviewsQuery.limit(pageSize);
 
     const snapshot = await reviewsQuery.get();
-    const reviews: Review[] = snapshot.docs.map(doc => ({
+    const reviews: Review[] = snapshot.docs.map((doc: any) => ({
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate() || new Date(),
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     })) as Review[];
 
     // Get total count (simplified)
-    const totalQuery = adminDb.collection('reviews').where('status', '==', status);
+    const totalQuery: any = adminDb.collection('reviews').where('status', '==', status);
     const totalSnapshot = await totalQuery.get();
     const totalItems = totalSnapshot.size;
     const totalPages = Math.ceil(totalItems / pageSize);
@@ -127,6 +127,15 @@ export async function GET(request: NextRequest) {
 // POST /api/reviews - Create new review
 export async function POST(request: NextRequest) {
   try {
+    // Check if Firebase Admin is properly configured
+    const adminDb = getAdminDb();
+    if (!adminDb) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
+        { status: 500 }
+      );
+    }
+
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -213,17 +222,10 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date(),
     };
 
-    const docRef = await addDoc(
-      collection(db, COLLECTIONS.REVIEWS).withConverter(reviewConverter),
-      reviewData as Review
-    );
+    const docRef = await adminDb.collection('reviews').add(reviewData as any);
 
     // Check if this is user's first review and promote them
-    const userReviewsQuery = query(
-      collection(db, COLLECTIONS.REVIEWS),
-      where('userId', '==', decodedToken.uid)
-    );
-    const userReviewsSnapshot = await getDocs(userReviewsQuery);
+    const userReviewsSnapshot = await adminDb.collection('reviews').where('userId', '==', decodedToken.uid).get();
     
     if (userReviewsSnapshot.size === 1) { // This is their first review
       await promoteToAuthenticated(decodedToken.uid);

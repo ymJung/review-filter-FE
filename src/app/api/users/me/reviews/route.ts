@@ -17,6 +17,14 @@ import { handleError } from '@/lib/utils';
 // GET /api/users/me/reviews - Get current user's reviews
 export async function GET(request: NextRequest) {
   try {
+    // Check if Firestore is initialized
+    if (!db) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { status: 500 }
+      );
+    }
+
     // Check if Firebase Admin is properly initialized
     if (getApps().length === 0) {
       return NextResponse.json(
