@@ -125,19 +125,27 @@ export const getOrCreateUser = async (
   additionalData?: Partial<User>
 ): Promise<User> => {
   try {
+    console.log('getOrCreateUser called with:', { uid: firebaseUser.uid, provider, socialId, additionalData });
+    
     // Try to get existing user
     let user = await getUser(firebaseUser.uid);
+    console.log('Existing user lookup result:', user);
     
     if (!user) {
+      console.log('User not found, creating new user...');
       // Create new user if doesn't exist
       user = await createUser(firebaseUser, provider, socialId, additionalData);
+      console.log('New user created:', user);
     } else {
+      console.log('User found, updating last login time...');
       // Update last login time
       await updateUser(firebaseUser.uid, {
         updatedAt: new Date()
       });
+      console.log('User last login time updated');
     }
     
+    console.log('getOrCreateUser returning user:', user);
     return user;
   } catch (error) {
     console.error('Error getting or creating user:', error);

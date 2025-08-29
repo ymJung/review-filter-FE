@@ -16,9 +16,6 @@ export default function NaverCallbackPage() {
     const expiresIn = params.get('expires_in');
     
     if (accessToken) {
-      // Store the token in localStorage or sessionStorage
-      localStorage.setItem('naver_access_token', accessToken);
-      
       // Send message to opener window if this is a popup
       if (window.opener) {
         window.opener.postMessage({
