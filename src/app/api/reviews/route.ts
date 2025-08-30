@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
 import { promoteToAuthenticated } from '@/lib/auth/user';
-import { createOrGetCourse } from '@/lib/services/courseService';
-import { Review, ApiResponse, PaginatedResponse } from '@/types';
+import { Review, ApiResponse, PaginatedResponse, Course } from '@/types';
 import { handleError } from '@/lib/utils';
-import { 
-  addDoc,
-  collection,
-  query,
-  where,
-  getDocs
-} from 'firebase/firestore';
-import { COLLECTIONS, db, reviewConverter } from '@/lib/firebase';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
@@ -124,6 +116,59 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Helper function to create or get course using Admin SDK
+async function createOrGetCourseAdmin(adminDb: any, courseData: {
+  title: string;
+  platform: string;
+  instructor?: string;
+  category?: string;
+}): Promise<Course | null> {
+  try {
+    if (!courseData.title || !courseData.platform) {
+      throw new Error('강의명과 플랫폼은 필수입니다.');
+    }
+
+    // Check if course already exists
+    const existingSnapshot = await adminDb.collection(COLLECTIONS.COURSES)
+      .where('title', '==', courseData.title)
+      .where('platform', '==', courseData.platform)
+      .get();
+    
+    if (!existingSnapshot.empty) {
+      // Course exists, return it
+      const existingDoc = existingSnapshot.docs[0];
+      const existingCourse: Course = {
+        id: existingDoc.id,
+        ...existingDoc.data(),
+        createdAt: existingDoc.data().createdAt?.toDate() || new Date(),
+      };
+      return existingCourse;
+    }
+
+    // Create new course
+    const courseDataToSave: Omit<Course, 'id'> = {
+      title: courseData.title.trim(),
+      platform: courseData.platform.trim(),
+      instructor: courseData.instructor?.trim(),
+      category: courseData.category?.trim(),
+      viewCount: 0,
+      createdAt: new Date(),
+    };
+
+    const docRef = await adminDb.collection(COLLECTIONS.COURSES).add(courseDataToSave);
+
+    const newCourse: Course = {
+      id: docRef.id,
+      ...courseDataToSave,
+    };
+
+    return newCourse;
+  } catch (error) {
+    console.error('Error creating course in Admin SDK:', error);
+    throw error;
+  }
+}
+
 // POST /api/reviews - Create new review
 export async function POST(request: NextRequest) {
   try {
@@ -191,8 +236,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create or get course
-    const course = await createOrGetCourse({
+    // Create or get course using Admin SDK directly
+    const course = await createOrGetCourseAdmin(adminDb, {
       title: courseTitle.trim(),
       platform: coursePlatform.trim(),
       instructor: courseInstructor?.trim(),
@@ -213,14 +258,31 @@ export async function POST(request: NextRequest) {
       content: content.trim(),
       rating: parseInt(rating),
       status: 'PENDING',
-      studyPeriod: studyPeriod ? new Date(studyPeriod) : undefined,
-      positivePoints: positivePoints?.trim(),
-      negativePoints: negativePoints?.trim(),
-      changes: changes?.trim(),
-      recommendedFor: recommendedFor?.trim(),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+
+    // Only add studyPeriod if it's provided
+    if (studyPeriod) {
+      reviewData.studyPeriod = new Date(studyPeriod);
+    }
+
+    // Only add optional fields if they're provided
+    if (positivePoints?.trim()) {
+      reviewData.positivePoints = positivePoints.trim();
+    }
+    
+    if (negativePoints?.trim()) {
+      reviewData.negativePoints = negativePoints.trim();
+    }
+    
+    if (changes?.trim()) {
+      reviewData.changes = changes.trim();
+    }
+    
+    if (recommendedFor?.trim()) {
+      reviewData.recommendedFor = recommendedFor.trim();
+    }
 
     const docRef = await adminDb.collection('reviews').add(reviewData as any);
 

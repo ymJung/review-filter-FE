@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { addDoc, collection } from 'firebase/firestore';
-import { storage, db } from '@/lib/firebase/config';
-import { COLLECTIONS } from '@/lib/firebase/collections';
+import { getAdminAuth, getAdminDb, getAdminStorage } from '@/lib/firebase/admin';
 import { ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 
 // POST /api/upload - Upload certification image
 export async function POST(request: NextRequest) {
   try {
-    // Check if Firebase services are initialized
-    if (!storage || !db) {
+    // Check if Firebase Admin services are properly configured
+    const adminDb = getAdminDb();
+    const adminAuth = getAdminAuth();
+    const adminStorage = getAdminStorage();
+    
+    if (!adminDb || !adminAuth || !adminStorage) {
       return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase services not initialized' } },
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin services not initialized' } },
         { status: 500 }
       );
     }
@@ -27,8 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const auth = getAuth();
-    const decodedToken = await auth.verifyIdToken(token);
+    const decodedToken = await adminAuth.verifyIdToken(token);
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -71,15 +71,21 @@ export async function POST(request: NextRequest) {
     const fileExtension = file.name.split('.').pop();
     const fileName = `review-images/${decodedToken.uid}/${reviewId}/${timestamp}.${fileExtension}`;
 
-    // Upload to Firebase Storage
-    const storageRef = ref(storage, fileName);
+    // Get Firebase Storage bucket
+    const bucket = adminStorage.bucket();
+    
+    // Convert file to buffer
     const fileBuffer = await file.arrayBuffer();
-    const uploadResult = await uploadBytes(storageRef, fileBuffer, {
-      contentType: file.type,
+    
+    // Upload to Firebase Storage
+    await bucket.file(fileName).save(Buffer.from(fileBuffer), {
+      metadata: {
+        contentType: file.type,
+      },
     });
 
     // Get download URL
-    const downloadURL = await getDownloadURL(uploadResult.ref);
+    const downloadURL = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
     // Save image info to Firestore
     const imageData = {
@@ -88,7 +94,7 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
     };
 
-    const docRef = await addDoc(collection(db, COLLECTIONS.REVIEW_IMAGES), imageData);
+    const docRef = await adminDb.collection(COLLECTIONS.REVIEW_IMAGES).add(imageData);
 
     const response: ApiResponse<{ id: string; url: string }> = {
       success: true,

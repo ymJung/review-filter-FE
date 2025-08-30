@@ -1,10 +1,12 @@
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { getStorage, Storage } from 'firebase-admin/storage';
 
 let adminApp: App | null = null;
 let adminAuth: Auth | null = null;
 let adminDb: Firestore | null = null;
+let adminStorage: Storage | null = null;
 
 /**
  * Initialize Firebase Admin SDK
@@ -20,6 +22,7 @@ function initializeFirebaseAdmin(): App | null {
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
     if (!clientEmail || !privateKey || !projectId) {
       console.warn('Firebase Admin SDK environment variables missing. Some features may not work.');
@@ -34,6 +37,7 @@ function initializeFirebaseAdmin(): App | null {
         privateKey: privateKey.replace(/\\n/g, '\n'),
       }),
       projectId,
+      storageBucket,
     });
 
     console.log('Firebase Admin SDK initialized successfully');
@@ -86,6 +90,24 @@ export function getAdminDb(): Firestore | null {
     return adminDb;
   } catch (error) {
     console.error('Failed to get Admin Firestore:', error);
+    return null;
+  }
+}
+
+/**
+ * Get Firebase Admin Storage instance
+ */
+export function getAdminStorage(): Storage | null {
+  try {
+    if (!adminStorage) {
+      const app = getAdminApp();
+      if (app) {
+        adminStorage = getStorage(app);
+      }
+    }
+    return adminStorage;
+  } catch (error) {
+    console.error('Failed to get Admin Storage:', error);
     return null;
   }
 }

@@ -79,10 +79,20 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       if (course) {
         handleCourseSelect(course);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating course:', error);
-      setErrors(['강의 정보 처리 중 오류가 발생했습니다.']);
+      setErrors([`강의 정보 처리 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`]);
     }
+  };
+
+  const handleCourseTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const title = e.target.value;
+    setFormData(prev => ({ ...prev, courseTitle: title }));
+    // Reset selected course if title changes
+    if (selectedCourse) {
+      setSelectedCourse(null);
+    }
+    setErrors([]);
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,10 +141,33 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       return;
     }
 
+    // If course title is entered but no course is selected, create the course
+    let courseData = selectedCourse;
+    if (formData.courseTitle && !selectedCourse) {
+      try {
+        courseData = await createOrGetCourse({
+          title: formData.courseTitle,
+          platform: formData.coursePlatform,
+          instructor: formData.courseInstructor,
+          category: formData.courseCategory,
+        });
+      } catch (error: any) {
+        console.error('Error creating course:', error);
+        setErrors([`강의 정보 처리 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`]);
+        return;
+      }
+    }
+
     // Validate form
     const validation = validateReviewForm(formData);
     if (!validation.isValid) {
       setErrors(validation.errors);
+      return;
+    }
+
+    // Check if course data is available
+    if (!courseData) {
+      setErrors(['강의 정보를 입력해주세요.']);
       return;
     }
 
@@ -145,8 +178,16 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       // Get auth token
       const token = await firebaseUser.getIdToken();
 
-      // Create review
-      const review = await createReview(formData, token);
+      // Create review with course data
+      const reviewData = {
+        ...formData,
+        courseTitle: courseData.title,
+        coursePlatform: courseData.platform,
+        courseInstructor: courseData.instructor || '',
+        courseCategory: courseData.category || '',
+      };
+
+      const review = await createReview(reviewData, token);
       
       if (!review) {
         throw new Error('리뷰 생성에 실패했습니다.');
@@ -187,7 +228,13 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       }
 
     } catch (error: any) {
-      setErrors([error.message || '리뷰 작성 중 오류가 발생했습니다.']);
+      console.error('Error creating review:', error);
+      // Check if it's a Firebase permission error
+      if (error.message && error.message.includes('PERMISSION_DENIED')) {
+        setErrors(['권한이 없습니다. 관리자에게 문의해주세요.']);
+      } else {
+        setErrors([error.message || '리뷰 작성 중 오류가 발생했습니다.']);
+      }
     } finally {
       setLoading(false);
     }
@@ -227,11 +274,19 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">강의 정보</h3>
             
+            <Input
+              label="강의명 *"
+              value={formData.courseTitle}
+              onChange={handleCourseTitleChange}
+              placeholder="강의명을 입력하세요"
+              required
+            />
             <CourseSearch
               onCourseSelect={handleCourseSelect}
               onCourseCreate={handleCourseCreate}
-              placeholder="강의명을 검색하거나 입력하세요..."
+              placeholder="기존 강의 검색..."
               showCreateOption={true}
+              className="mt-2"
             />
 
             {selectedCourse && (

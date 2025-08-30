@@ -9,7 +9,7 @@ export const validateReview = (data: Partial<ReviewFormData>): { isValid: boolea
   }
 
   if (!data.coursePlatform?.trim()) {
-    errors.push('강의 플랫폼을 입력해주세요.');
+    errors.push('강의 플랫폼을 선택해주세요.');
   }
 
   if (!data.content?.trim()) {

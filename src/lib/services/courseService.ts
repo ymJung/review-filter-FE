@@ -82,8 +82,9 @@ export const createOrGetCourse = async (courseData: {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Failed to create course');
+      const errorText = await response.text();
+      console.error('Course creation error response:', errorText);
+      throw new Error(`Failed to create course: ${response.status} ${response.statusText}`);
     }
 
     const result: ApiResponse<Course> = await response.json();
