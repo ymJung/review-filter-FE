@@ -265,14 +265,18 @@ export const signInWithNaver = async (): Promise<{
               clearTimeout(timeout);
               window.removeEventListener('message', handleMessage);
               
-              // Get user profile using our backend API to avoid CORS issues
-              fetch(`/api/auth/naver/profile?access_token=${event.data.accessToken}`)
+              // Get user profile using the access token
+              fetch('https://openapi.naver.com/v1/nid/me', {
+                headers: {
+                  'Authorization': `Bearer ${event.data.accessToken}`
+                }
+              })
               .then(response => response.json())
-              .then(data => {
-                if (data.profile) {
+              .then(profileData => {
+                if (profileData.resultcode === '00') {
                   resolve({
                     accessToken: event.data.accessToken,
-                    profile: data.profile,
+                    profile: profileData.response,
                     provider: 'naver'
                   });
                 } else {
@@ -280,7 +284,6 @@ export const signInWithNaver = async (): Promise<{
                 }
               })
               .catch(error => {
-                console.error('Naver profile fetch error:', error);
                 reject(new AuthError('네이버 프로필 조회 중 오류가 발생했습니다.', 'NAVER_PROFILE_ERROR'));
               });
               break;
@@ -350,15 +353,12 @@ export const createCustomToken = async (
 // Sign in with custom token
 export const signInWithCustomTokenAuth = async (customToken: string): Promise<UserCredential> => {
   try {
-    console.log('Signing in with custom token:', customToken.substring(0, 20) + '...');
     if (!auth) {
       throw new AuthError('Firebase Auth가 초기화되지 않았습니다.', 'AUTH_NOT_INITIALIZED');
     }
     const result = await signInWithCustomToken(auth, customToken);
-    console.log('Custom token sign in successful:', result.user.uid);
     return result;
   } catch (error: any) {
-    console.error('Custom token sign in error:', error);
     throw handleAuthError(error);
   }
 };
@@ -369,12 +369,8 @@ export const completeSocialLogin = async (
   socialData: any
 ): Promise<UserCredential> => {
   try {
-    console.log('Completing social login for provider:', provider);
-    console.log('Social data:', socialData);
     const customToken = await createCustomToken(provider, socialData);
-    console.log('Custom token received, signing in...');
     const result = await signInWithCustomTokenAuth(customToken);
-    console.log('Social login completed successfully');
     return result;
   } catch (error) {
     console.error('Complete social login error:', error);

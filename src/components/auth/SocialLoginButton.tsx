@@ -127,25 +127,13 @@ export const SocialLoginButton: React.FC<SocialLoginButtonProps> = ({
           
         case 'naver':
           const naverResult = await signInWithNaver();
-          console.log('Naver result:', naverResult);
-          const socialData = {
+          result = await completeSocialLogin(provider, {
             id: naverResult.profile.id,
             email: naverResult.profile.email,
             name: naverResult.profile.name,
             nickname: naverResult.profile.nickname,
             accessToken: naverResult.accessToken,
-          };
-          console.log('Naver social data:', socialData);
-          result = await completeSocialLogin(provider, socialData);
-          // Create or get user in Firestore for Naver
-          await getOrCreateUser(
-            result.user,
-            'naver' as SocialProvider,
-            naverResult.profile.id.toString(),
-            {
-              nickname: naverResult.profile.nickname || naverResult.profile.name || undefined,
-            }
-          );
+          });
           break;
           
         default:
