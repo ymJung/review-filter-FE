@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { getUserStatistics, updateCurrentUser, validateNickname } from '@/lib/services/userService';
+import { MypageService } from '@/lib/services/mypageService';
 import { UserStats } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { USER_ROLES } from '@/lib/constants';
@@ -12,7 +12,7 @@ interface UserProfileProps {
 }
 
 export const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
-  const { user, refreshUser } = useAuth();
+  const { user, firebaseUser } = useAuth();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [nickname, setNickname] = useState('');
@@ -23,9 +23,10 @@ export const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
   // Load user stats
   useEffect(() => {
     const loadStats = async () => {
-      if (user) {
+      if (user && firebaseUser) {
         try {
-          const userStats = await getUserStatistics();
+          const token = await firebaseUser.getIdToken();
+          const userStats = await MypageService.getMyStats(token);
           setStats(userStats);
         } catch (error) {
           console.error('Error loading user stats:', error);
@@ -34,7 +35,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
     };
 
     loadStats();
-  }, [user]);
+  }, [user, firebaseUser]);
 
   // Initialize nickname when editing
   useEffect(() => {
@@ -69,7 +70,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
     setError('');
 
     try {
-      await updateCurrentUser({ nickname: nickname.trim() });
+      const token = await firebaseUser.getIdToken();
+      await updateCurrentUser({ nickname: nickname.trim() }, token);
       await refreshUser();
       setIsEditing(false);
       setSuccess('닉네임이 성공적으로 변경되었습니다.');

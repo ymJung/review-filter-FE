@@ -28,12 +28,13 @@ export const getCurrentUser = async (): Promise<User | null> => {
 };
 
 // Update current user
-export const updateCurrentUser = async (updates: { nickname: string }): Promise<User | null> => {
+export const updateCurrentUser = async (updates: { nickname: string }, token: string): Promise<User | null> => {
   try {
     const response = await fetch('/api/users', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(updates),
     });
@@ -58,6 +59,7 @@ export const getUserStatistics = async (): Promise<UserStats | null> => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        // Authorization header will be added by auth interceptor or need to be handled manually
       },
     });
 

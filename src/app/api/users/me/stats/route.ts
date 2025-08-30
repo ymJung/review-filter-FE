@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  getCountFromServer 
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { getApps } from 'firebase-admin/app';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
 import { ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 
 interface UserStats {
   reviewCount: number;
@@ -26,18 +18,22 @@ interface UserStats {
 // GET /api/users/me/stats - Get current user's statistics
 export async function GET(request: NextRequest) {
   try {
-    // Check if Firestore is initialized
-    if (!db) {
+    // Check if Firebase Admin is properly configured
+    const adminDb = getAdminDb();
+    const adminAuth = getAdminAuth();
+    
+    if (!adminDb) {
+      console.error('Admin DB is not initialized');
       return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin DB not configured' } },
         { status: 500 }
       );
     }
-
-    // Check if Firebase Admin is properly initialized
-    if (getApps().length === 0) {
+    
+    if (!adminAuth) {
+      console.error('Admin Auth is not initialized');
       return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin Auth not configured' } },
         { status: 500 }
       );
     }
@@ -51,48 +47,55 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const auth = getAuth();
-    const decodedToken = await auth.verifyIdToken(token);
+    const decodedToken = await adminAuth.verifyIdToken(token);
 
     // Get review counts
-    const reviewsRef = collection(db, 'reviews');
-    const allReviewsQuery = query(reviewsRef, where('userId', '==', decodedToken.uid));
-    const approvedReviewsQuery = query(reviewsRef, where('userId', '==', decodedToken.uid), where('status', '==', 'APPROVED'));
-    const pendingReviewsQuery = query(reviewsRef, where('userId', '==', decodedToken.uid), where('status', '==', 'PENDING'));
+    const reviewsRef: any = adminDb.collection(COLLECTIONS.REVIEWS);
+    const allReviewsQuery = reviewsRef.where('userId', '==', decodedToken.uid);
+    const approvedReviewsQuery = reviewsRef
+      .where('userId', '==', decodedToken.uid)
+      .where('status', '==', 'APPROVED');
+    const pendingReviewsQuery = reviewsRef
+      .where('userId', '==', decodedToken.uid)
+      .where('status', '==', 'PENDING');
 
     const [allReviewsCount, approvedReviewsCount, pendingReviewsCount] = await Promise.all([
-      getCountFromServer(allReviewsQuery),
-      getCountFromServer(approvedReviewsQuery),
-      getCountFromServer(pendingReviewsQuery)
+      allReviewsQuery.count().get(),
+      approvedReviewsQuery.count().get(),
+      pendingReviewsQuery.count().get()
     ]);
 
     // Get roadmap counts
-    const roadmapsRef = collection(db, 'roadmaps');
-    const allRoadmapsQuery = query(roadmapsRef, where('userId', '==', decodedToken.uid));
-    const approvedRoadmapsQuery = query(roadmapsRef, where('userId', '==', decodedToken.uid), where('status', '==', 'APPROVED'));
-    const pendingRoadmapsQuery = query(roadmapsRef, where('userId', '==', decodedToken.uid), where('status', '==', 'PENDING'));
+    const roadmapsRef: any = adminDb.collection(COLLECTIONS.ROADMAPS);
+    const allRoadmapsQuery = roadmapsRef.where('userId', '==', decodedToken.uid);
+    const approvedRoadmapsQuery = roadmapsRef
+      .where('userId', '==', decodedToken.uid)
+      .where('status', '==', 'APPROVED');
+    const pendingRoadmapsQuery = roadmapsRef
+      .where('userId', '==', decodedToken.uid)
+      .where('status', '==', 'PENDING');
 
     const [allRoadmapsCount, approvedRoadmapsCount, pendingRoadmapsCount] = await Promise.all([
-      getCountFromServer(allRoadmapsQuery),
-      getCountFromServer(approvedRoadmapsQuery),
-      getCountFromServer(pendingRoadmapsQuery)
+      allRoadmapsQuery.count().get(),
+      approvedRoadmapsQuery.count().get(),
+      pendingRoadmapsQuery.count().get()
     ]);
 
     // Get comment count
-    const commentsRef = collection(db, 'comments');
-    const commentsQuery = query(commentsRef, where('userId', '==', decodedToken.uid));
-    const commentsCount = await getCountFromServer(commentsQuery);
+    const commentsRef: any = adminDb.collection(COLLECTIONS.COMMENTS);
+    const commentsQuery = commentsRef.where('userId', '==', decodedToken.uid);
+    const commentsCount = await commentsQuery.count().get();
 
     // Calculate total views (sum of viewCount from approved reviews and roadmaps)
-    const approvedReviewsSnapshot = await getDocs(approvedReviewsQuery);
-    const approvedRoadmapsSnapshot = await getDocs(approvedRoadmapsQuery);
+    const approvedReviewsSnapshot = await approvedReviewsQuery.get();
+    const approvedRoadmapsSnapshot = await approvedRoadmapsQuery.get();
 
     let totalViews = 0;
-    approvedReviewsSnapshot.docs.forEach(doc => {
+    approvedReviewsSnapshot.docs.forEach((doc: any) => {
       const data = doc.data();
       totalViews += data.viewCount || 0;
     });
-    approvedRoadmapsSnapshot.docs.forEach(doc => {
+    approvedRoadmapsSnapshot.docs.forEach((doc: any) => {
       const data = doc.data();
       totalViews += data.viewCount || 0;
     });
