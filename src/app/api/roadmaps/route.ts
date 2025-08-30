@@ -1,26 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
-  orderBy, 
-  getDocs, 
-  limit as firestoreLimit,
-  serverTimestamp 
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { getApps } from 'firebase-admin/app';
-import { roadmapConverter } from '@/lib/firebase/converters';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
 import { Roadmap, ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 
 // GET /api/roadmaps - Get roadmaps list
 export async function GET(request: NextRequest) {
   try {
-    // Check if Firestore is initialized
-    if (!db) {
+    // Check if Firebase Admin is properly configured
+    const adminDb = getAdminDb();
+    if (!adminDb) {
       return NextResponse.json(
         { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
         { status: 500 }
@@ -32,30 +21,27 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'APPROVED';
     const category = searchParams.get('category');
 
-    const roadmapsRef = collection(db, 'roadmaps');
-    let q = query(
-      roadmapsRef,
-      where('status', '==', status),
-      orderBy('createdAt', 'desc'),
-      firestoreLimit(limit)
-    );
+    // Build query using Firebase Admin SDK
+    let roadmapsQuery: any = adminDb.collection(COLLECTIONS.ROADMAPS);
 
-    // Add category filter if provided
+    // Add filters
+    roadmapsQuery = roadmapsQuery.where('status', '==', status);
+    
     if (category) {
-      q = query(
-        roadmapsRef,
-        where('status', '==', status),
-        where('category', '==', category),
-        orderBy('createdAt', 'desc'),
-        firestoreLimit(limit)
-      );
+      roadmapsQuery = roadmapsQuery.where('category', '==', category);
     }
 
-    const querySnapshot = await getDocs(q);
-    const roadmaps = querySnapshot.docs.map(doc => ({
+    // Add sorting and limit
+    roadmapsQuery = roadmapsQuery
+      .orderBy('createdAt', 'desc')
+      .limit(limit);
+
+    const querySnapshot = await roadmapsQuery.get();
+    const roadmaps: Roadmap[] = querySnapshot.docs.map((doc: any) => ({
       id: doc.id,
-      ...doc.data()
-    })) as Roadmap[];
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+    }));
 
     const response: ApiResponse<Roadmap[]> = {
       success: true,
@@ -75,16 +61,11 @@ export async function GET(request: NextRequest) {
 // POST /api/roadmaps - Create a new roadmap
 export async function POST(request: NextRequest) {
   try {
-    // Check if Firestore is initialized
-    if (!db) {
-      return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
-        { status: 500 }
-      );
-    }
-
-    // Check if Firebase Admin is properly initialized
-    if (getApps().length === 0) {
+    // Check if Firebase Admin is properly configured
+    const adminDb = getAdminDb();
+    const adminAuth = getAdminAuth();
+    
+    if (!adminDb || !adminAuth) {
       return NextResponse.json(
         { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
         { status: 500 }
@@ -100,16 +81,14 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const auth = getAuth();
-    const decodedToken = await auth.verifyIdToken(token);
+    const decodedToken = await adminAuth.verifyIdToken(token);
 
     const {
       title,
       description,
       courseTitle,
       coursePlatform,
-      nextCourseTitle,
-      nextCoursePlatform,
+      nextCourses,
       category
     } = await request.json();
 
@@ -127,20 +106,22 @@ export async function POST(request: NextRequest) {
       description: description.trim(),
       courseTitle: courseTitle.trim(),
       coursePlatform: coursePlatform.trim(),
-      nextCourseTitle: nextCourseTitle?.trim(),
-      nextCoursePlatform: nextCoursePlatform?.trim(),
-      category: category?.trim(),
+      nextCourses: nextCourses?.map((course: any) => ({
+        title: course.title?.trim() || '',
+        platform: course.platform?.trim() || ''
+      })).filter((course: any) => course.title && course.platform) || [],
       userId: decodedToken.uid,
       status: 'PENDING', // 검수 대기 상태
       viewCount: 0,
       createdAt: new Date(),
     };
 
-    const roadmapsRef = collection(db, 'roadmaps');
-    const docRef = await addDoc(roadmapsRef, {
-      ...roadmapData,
-      createdAt: serverTimestamp(),
-    });
+    // Only add category if it's provided
+    if (category && category.trim()) {
+      (roadmapData as any).category = category.trim();
+    }
+
+    const docRef = await adminDb.collection(COLLECTIONS.ROADMAPS).add(roadmapData);
 
     const newRoadmap: Roadmap = {
       id: docRef.id,

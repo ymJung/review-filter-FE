@@ -79,8 +79,10 @@ export interface Roadmap {
   description: string;
   courseTitle: string;
   coursePlatform: string;
-  nextCourseTitle?: string;
-  nextCoursePlatform?: string;
+  nextCourses?: Array<{
+    title: string;
+    platform: string;
+  }>;
   category?: string;
   userId: string;
   status: RoadmapStatus;
@@ -129,8 +131,10 @@ export interface RoadmapFormData {
   description: string;
   courseTitle: string;
   coursePlatform: string;
-  nextCourseTitle?: string;
-  nextCoursePlatform?: string;
+  nextCourses?: Array<{
+    title: string;
+    platform: string;
+  }>;
 }
 
 // Auth Types

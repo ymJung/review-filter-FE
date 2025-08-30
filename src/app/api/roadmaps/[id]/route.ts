@@ -1,33 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { getDoc, updateDoc, increment } from 'firebase/firestore';
-import { getRoadmapDoc, getUserDoc } from '@/lib/firebase/collections';
-import { roadmapConverter, userConverter } from '@/lib/firebase/converters';
-import { getApps } from 'firebase-admin/app';
-import { Roadmap, ApiResponse } from '@/types';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
+import { Roadmap, ApiResponse, User } from '@/types';
 import { handleError } from '@/lib/utils';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 
 // GET /api/roadmaps/[id] - Get specific roadmap and increment view count
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
 
-    const roadmapRef = getRoadmapDoc(id).withConverter(roadmapConverter);
-    const roadmapSnap = await getDoc(roadmapRef);
+    // Check if Firebase Admin is properly configured
+    const adminDb = getAdminDb();
+    if (!adminDb) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { status: 500 }
+      );
+    }
 
-    if (!roadmapSnap.exists()) {
+    // Get roadmap document
+    const roadmapDoc = await adminDb.collection(COLLECTIONS.ROADMAPS).doc(id).get();
+
+    if (!roadmapDoc.exists) {
       return NextResponse.json(
         { success: false, error: { code: 'NOT_FOUND', message: '로드맵을 찾을 수 없습니다.' } },
         { status: 404 }
       );
     }
 
-    const roadmap = roadmapSnap.data();
+    const roadmapData = roadmapDoc.data();
+    const roadmap: Roadmap = {
+      id: roadmapDoc.id,
+      ...roadmapData,
+      createdAt: roadmapData.createdAt?.toDate() || new Date(),
+    };
 
     // Get user information (nickname only for privacy)
-    const userRef = getUserDoc(roadmap.userId).withConverter(userConverter);
-    const userSnap = await getDoc(userRef);
-    const user = userSnap.exists() ? userSnap.data() : null;
+    let user: User | null = null;
+    if (roadmap.userId) {
+      const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(roadmap.userId).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        user = {
+          id: userDoc.id,
+          ...userData,
+          createdAt: userData.createdAt?.toDate() || new Date(),
+          updatedAt: userData.updatedAt?.toDate() || new Date(),
+        };
+      }
+    }
 
     // Check if user can view this roadmap
     const authHeader = request.headers.get('authorization');
@@ -36,28 +57,34 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     if (authHeader?.startsWith('Bearer ')) {
       try {
         const token = authHeader.split('Bearer ')[1];
-        const auth = getAuth();
-        const decodedToken = await auth.verifyIdToken(token);
-        
-        // User can view their own roadmaps regardless of status
-        if (decodedToken.uid === roadmap.userId) {
-          canViewFullContent = true;
-        }
-        
-        // Admin can view all roadmaps
-        const requestingUser = await getDoc(getUserDoc(decodedToken.uid).withConverter(userConverter));
-        if (requestingUser.exists() && requestingUser.data().role === 'ADMIN') {
-          canViewFullContent = true;
+        const adminAuth = getAdminAuth();
+        if (adminAuth) {
+          const decodedToken = await adminAuth.verifyIdToken(token);
+          
+          // User can view their own roadmaps regardless of status
+          if (decodedToken.uid === roadmap.userId) {
+            canViewFullContent = true;
+          }
+          
+          // Admin can view all roadmaps
+          const requestingUserDoc = await adminDb.collection(COLLECTIONS.USERS).doc(decodedToken.uid).get();
+          if (requestingUserDoc.exists) {
+            const requestingUserData = requestingUserDoc.data();
+            if (requestingUserData.role === 'ADMIN') {
+              canViewFullContent = true;
+            }
+          }
         }
       } catch (error) {
         // Invalid token, continue with public access
+        console.error('Token verification error:', error);
       }
     }
 
     // Increment view count for approved roadmaps
     if (roadmap.status === 'APPROVED') {
-      await updateDoc(getRoadmapDoc(id), {
-        viewCount: increment(1)
+      await adminDb.collection(COLLECTIONS.ROADMAPS).doc(id).update({
+        viewCount: roadmap.viewCount + 1
       });
     }
 
@@ -74,8 +101,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         description: '검수 중인 로드맵입니다.',
         courseTitle: '검수 중',
         coursePlatform: '검수 중',
-        nextCourseTitle: undefined,
-        nextCoursePlatform: undefined,
+        nextCourses: [],
       }),
     };
 
@@ -97,8 +123,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 // PUT /api/roadmaps/[id] - Update roadmap (owner or admin only)
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // Check if Firebase Admin is properly initialized
-    if (getApps().length === 0) {
+    // Check if Firebase Admin is properly configured
+    const adminDb = getAdminDb();
+    const adminAuth = getAdminAuth();
+    
+    if (!adminDb || !adminAuth) {
       return NextResponse.json(
         { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
         { status: 500 }
@@ -114,28 +143,31 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const auth = getAuth();
-    const decodedToken = await auth.verifyIdToken(token);
+    const decodedToken = await adminAuth.verifyIdToken(token);
     
     const { id } = params;
     const updateData = await request.json();
 
-    const roadmapRef = getRoadmapDoc(id).withConverter(roadmapConverter);
-    const roadmapSnap = await getDoc(roadmapRef);
+    // Get roadmap document
+    const roadmapDoc = await adminDb.collection(COLLECTIONS.ROADMAPS).doc(id).get();
 
-    if (!roadmapSnap.exists()) {
+    if (!roadmapDoc.exists) {
       return NextResponse.json(
         { success: false, error: { code: 'NOT_FOUND', message: '로드맵을 찾을 수 없습니다.' } },
         { status: 404 }
       );
     }
 
-    const roadmap = roadmapSnap.data();
+    const roadmapData = roadmapDoc.data();
+    const roadmap: Roadmap = {
+      id: roadmapDoc.id,
+      ...roadmapData,
+      createdAt: roadmapData.createdAt?.toDate() || new Date(),
+    };
 
     // Check permissions
-    const userRef = getUserDoc(decodedToken.uid).withConverter(userConverter);
-    const userSnap = await getDoc(userRef);
-    const user = userSnap.exists() ? userSnap.data() : null;
+    const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(decodedToken.uid).get();
+    const user = userDoc.exists ? userDoc.data() : null;
 
     const isOwner = roadmap.userId === decodedToken.uid;
     const isAdmin = user?.role === 'ADMIN';
@@ -148,7 +180,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     // Prepare update data
-    const updates: Partial<Roadmap> = {};
+    const updates: any = {};
 
     // Only allow certain fields to be updated by owner
     if (isOwner) {
@@ -156,11 +188,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       if (updateData.description) updates.description = updateData.description.trim();
       if (updateData.courseTitle) updates.courseTitle = updateData.courseTitle.trim();
       if (updateData.coursePlatform) updates.coursePlatform = updateData.coursePlatform.trim();
-      if (updateData.nextCourseTitle !== undefined) {
-        updates.nextCourseTitle = updateData.nextCourseTitle?.trim();
-      }
-      if (updateData.nextCoursePlatform !== undefined) {
-        updates.nextCoursePlatform = updateData.nextCoursePlatform?.trim();
+      if (updateData.nextCourses !== undefined) {
+        updates.nextCourses = updateData.nextCourses;
       }
       if (updateData.category !== undefined) {
         updates.category = updateData.category?.trim();
@@ -177,11 +206,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       updates.status = updateData.status;
     }
 
-    await updateDoc(getRoadmapDoc(id), updates);
+    await adminDb.collection(COLLECTIONS.ROADMAPS).doc(id).update(updates);
 
     // Get updated roadmap
-    const updatedSnap = await getDoc(roadmapRef);
-    const updatedRoadmap = updatedSnap.data()!;
+    const updatedDoc = await adminDb.collection(COLLECTIONS.ROADMAPS).doc(id).get();
+    const updatedData = updatedDoc.data();
+    const updatedRoadmap: Roadmap = {
+      id: updatedDoc.id,
+      ...updatedData,
+      createdAt: updatedData.createdAt?.toDate() || new Date(),
+    };
 
     const response: ApiResponse<Roadmap> = {
       success: true,
@@ -201,8 +235,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 // DELETE /api/roadmaps/[id] - Delete roadmap (owner or admin only)
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // Check if Firebase Admin is properly initialized
-    if (getApps().length === 0) {
+    // Check if Firebase Admin is properly configured
+    const adminDb = getAdminDb();
+    const adminAuth = getAdminAuth();
+    
+    if (!adminDb || !adminAuth) {
       return NextResponse.json(
         { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
         { status: 500 }
@@ -218,27 +255,30 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const auth = getAuth();
-    const decodedToken = await auth.verifyIdToken(token);
+    const decodedToken = await adminAuth.verifyIdToken(token);
     
     const { id } = params;
 
-    const roadmapRef = getRoadmapDoc(id).withConverter(roadmapConverter);
-    const roadmapSnap = await getDoc(roadmapRef);
+    // Get roadmap document
+    const roadmapDoc = await adminDb.collection(COLLECTIONS.ROADMAPS).doc(id).get();
 
-    if (!roadmapSnap.exists()) {
+    if (!roadmapDoc.exists) {
       return NextResponse.json(
         { success: false, error: { code: 'NOT_FOUND', message: '로드맵을 찾을 수 없습니다.' } },
         { status: 404 }
       );
     }
 
-    const roadmap = roadmapSnap.data();
+    const roadmapData = roadmapDoc.data();
+    const roadmap: Roadmap = {
+      id: roadmapDoc.id,
+      ...roadmapData,
+      createdAt: roadmapData.createdAt?.toDate() || new Date(),
+    };
 
     // Check permissions
-    const userRef = getUserDoc(decodedToken.uid).withConverter(userConverter);
-    const userSnap = await getDoc(userRef);
-    const user = userSnap.exists() ? userSnap.data() : null;
+    const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(decodedToken.uid).get();
+    const user = userDoc.exists ? userDoc.data() : null;
 
     const isOwner = roadmap.userId === decodedToken.uid;
     const isAdmin = user?.role === 'ADMIN';
@@ -251,7 +291,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     // Soft delete by updating status to REJECTED
-    await updateDoc(getRoadmapDoc(id), {
+    await adminDb.collection(COLLECTIONS.ROADMAPS).doc(id).update({
       status: 'REJECTED',
     });
 
