@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -31,10 +31,13 @@ export const PerformanceDashboard: React.FC = () => {
     refreshData 
   } = usePerformance();
 
-  const { violations, isWithinBudget } = usePerformanceBudget({
+  // Memoize the budgets object to prevent it from changing on every render
+  const performanceBudgets = useMemo(() => ({
     maxRenderTime: 2500, // 2.5 seconds for FCP
     maxMemoryUsage: 50, // 50MB
-  });
+  }), []);
+
+  const { violations, isWithinBudget } = usePerformanceBudget(performanceBudgets);
 
   const { collectDebugInfo, exportDebugInfo } = usePerformanceDebug();
 

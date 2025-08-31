@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { Review, Course, User } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -18,6 +19,8 @@ interface ReviewWithDetails extends Review {
 }
 
 export function ReviewModerationPanel() {
+  const { firebaseUser } = useAuth();
+  const hasFetchedData = useRef(false);
   const [reviews, setReviews] = useState<ReviewWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,11 +28,26 @@ export function ReviewModerationPanel() {
   const [filter, setFilter] = useState<'PENDING' | 'REJECTED' | 'ALL'>('PENDING');
 
   useEffect(() => {
-    fetchReviews();
-  }, [filter]);
+    // Reset the flag when user changes or filter changes
+    hasFetchedData.current = false;
+  }, [firebaseUser, filter]);
+
+  useEffect(() => {
+    // Fetch data when user is available and we haven't fetched yet
+    if (firebaseUser && !hasFetchedData.current) {
+      hasFetchedData.current = true;
+      fetchReviews();
+    }
+  }, [firebaseUser, filter]);
 
   const fetchReviews = async () => {
     try {
+      // Wait for firebaseUser to be available
+      if (!firebaseUser) {
+        hasFetchedData.current = false; // Reset flag if no user
+        return;
+      }
+
       setLoading(true);
       setError(null);
 
@@ -39,7 +57,15 @@ export function ReviewModerationPanel() {
       }
       params.set('limit', '50');
 
-      const response = await fetch(`/api/admin/reviews?${params.toString()}`);
+      // Get auth token
+      const token = await firebaseUser.getIdToken();
+
+      const response = await fetch(`/api/admin/reviews?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
       if (!response.ok) {
         throw new Error('리뷰 목록을 불러오는데 실패했습니다.');
       }
@@ -53,6 +79,7 @@ export function ReviewModerationPanel() {
     } catch (error: any) {
       console.error('Error fetching reviews:', error);
       setError(error.message);
+      hasFetchedData.current = false; // Reset flag on error so we can retry
     } finally {
       setLoading(false);
     }
@@ -60,12 +87,20 @@ export function ReviewModerationPanel() {
 
   const handleReviewAction = async (reviewId: string, action: 'approve' | 'reject', reason?: string) => {
     try {
+      if (!firebaseUser) {
+        throw new Error('인증이 필요합니다.');
+      }
+
       setProcessingId(reviewId);
+
+      // Get auth token
+      const token = await firebaseUser.getIdToken();
 
       const response = await fetch(`/api/admin/reviews/${reviewId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           action,

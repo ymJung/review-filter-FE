@@ -7,7 +7,12 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // Date formatting utilities
-export const formatDate = (date: Date, locale: string = 'ko-KR'): string => {
+export const formatDate = (date: Date | undefined, locale: string = 'ko-KR'): string => {
+  // Handle undefined or invalid dates
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return '날짜 없음';
+  }
+  
   return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
     month: 'long',
@@ -15,17 +20,27 @@ export const formatDate = (date: Date, locale: string = 'ko-KR'): string => {
   }).format(date);
 };
 
-export const formatDateTime = (date: Date, locale: string = 'ko-KR'): string => {
+export const formatDateTime = (date: Date | undefined, locale: string = 'ko-KR'): string => {
+  // Handle undefined or invalid dates
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return '날짜 없음';
+  }
+  
   return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
-    month: 'long',
+    month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
 };
 
-export const formatRelativeTime = (date: Date, locale: string = 'ko-KR'): string => {
+export const formatRelativeTime = (date: Date | undefined, locale: string = 'ko-KR'): string => {
+  // Handle undefined or invalid dates
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return '날짜 없음';
+  }
+  
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 

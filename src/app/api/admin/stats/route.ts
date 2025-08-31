@@ -1,18 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  orderBy, 
-  limit as firestoreLimit,
-  Timestamp
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
-import { verifyAuthToken } from '@/lib/auth';
 
 interface AdminStats {
   totalUsers: number;
@@ -31,94 +21,96 @@ interface AdminStats {
 // GET /api/admin/stats - Get admin dashboard statistics
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin authentication
-    const authResult = await verifyAuthToken(request);
-    if (!authResult.success || !authResult.user) {
+    // Check if Firebase Admin is properly configured
+    const adminDb = getAdminDb();
+    const adminAuth = getAdminAuth();
+    
+    if (!adminDb || !adminAuth) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
+        { status: 500 }
+      );
+    }
+
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
         { status: 401 }
       );
     }
 
-    if (authResult.user.role !== 'ADMIN') {
+    const token = authHeader.split('Bearer ')[1];
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    
+    // Get user to check if they're admin
+    const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(decodedToken.uid).get();
+    if (!userDoc.exists) {
+      return NextResponse.json(
+        { success: false, error: { code: 'USER_NOT_FOUND', message: '사용자를 찾을 수 없습니다.' } },
+        { status: 404 }
+      );
+    }
+
+    const userData = userDoc.data();
+    if (userData.role !== 'ADMIN') {
       return NextResponse.json(
         { success: false, error: { code: 'FORBIDDEN', message: '관리자 권한이 필요합니다.' } },
         { status: 403 }
       );
     }
 
-    // Check if Firestore is initialized
-    if (!db) {
-      return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
-        { status: 500 }
-      );
-    }
-
     // Calculate date for recent activity (7 days ago)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const sevenDaysAgoTimestamp = Timestamp.fromDate(sevenDaysAgo);
 
     // Get total users
-    const usersSnapshot = await getDocs(collection(db, COLLECTIONS.USERS));
-    const totalUsers = usersSnapshot.size;
+    const usersSnapshot = await adminDb.collection(COLLECTIONS.USERS).count().get();
+    const totalUsers = usersSnapshot.data().count;
 
     // Get blocked users count
-    const blockedUsersQuery = query(
-      collection(db, COLLECTIONS.USERS),
-      where('role', '==', 'BLOCKED_LOGIN')
-    );
-    const blockedUsersSnapshot = await getDocs(blockedUsersQuery);
-    const blockedUsers = blockedUsersSnapshot.size;
+    const blockedUsersQuery = adminDb.collection(COLLECTIONS.USERS)
+      .where('role', '==', 'BLOCKED_LOGIN');
+    const blockedUsersSnapshot = await blockedUsersQuery.count().get();
+    const blockedUsers = blockedUsersSnapshot.data().count;
 
     // Get new users (last 7 days)
-    const newUsersQuery = query(
-      collection(db, COLLECTIONS.USERS),
-      where('createdAt', '>=', sevenDaysAgoTimestamp)
-    );
-    const newUsersSnapshot = await getDocs(newUsersQuery);
-    const newUsers = newUsersSnapshot.size;
+    const newUsersQuery = adminDb.collection(COLLECTIONS.USERS)
+      .where('createdAt', '>=', sevenDaysAgo);
+    const newUsersSnapshot = await newUsersQuery.count().get();
+    const newUsers = newUsersSnapshot.data().count;
 
     // Get total reviews
-    const reviewsSnapshot = await getDocs(collection(db, COLLECTIONS.REVIEWS));
-    const totalReviews = reviewsSnapshot.size;
+    const reviewsSnapshot = await adminDb.collection(COLLECTIONS.REVIEWS).count().get();
+    const totalReviews = reviewsSnapshot.data().count;
 
     // Get pending reviews
-    const pendingReviewsQuery = query(
-      collection(db, COLLECTIONS.REVIEWS),
-      where('status', '==', 'PENDING')
-    );
-    const pendingReviewsSnapshot = await getDocs(pendingReviewsQuery);
-    const pendingReviews = pendingReviewsSnapshot.size;
+    const pendingReviewsQuery = adminDb.collection(COLLECTIONS.REVIEWS)
+      .where('status', '==', 'PENDING');
+    const pendingReviewsSnapshot = await pendingReviewsQuery.count().get();
+    const pendingReviews = pendingReviewsSnapshot.data().count;
 
     // Get new reviews (last 7 days)
-    const newReviewsQuery = query(
-      collection(db, COLLECTIONS.REVIEWS),
-      where('createdAt', '>=', sevenDaysAgoTimestamp)
-    );
-    const newReviewsSnapshot = await getDocs(newReviewsQuery);
-    const newReviews = newReviewsSnapshot.size;
+    const newReviewsQuery = adminDb.collection(COLLECTIONS.REVIEWS)
+      .where('createdAt', '>=', sevenDaysAgo);
+    const newReviewsSnapshot = await newReviewsQuery.count().get();
+    const newReviews = newReviewsSnapshot.data().count;
 
     // Get total roadmaps
-    const roadmapsSnapshot = await getDocs(collection(db, COLLECTIONS.ROADMAPS));
-    const totalRoadmaps = roadmapsSnapshot.size;
+    const roadmapsSnapshot = await adminDb.collection(COLLECTIONS.ROADMAPS).count().get();
+    const totalRoadmaps = roadmapsSnapshot.data().count;
 
     // Get pending roadmaps
-    const pendingRoadmapsQuery = query(
-      collection(db, COLLECTIONS.ROADMAPS),
-      where('status', '==', 'PENDING')
-    );
-    const pendingRoadmapsSnapshot = await getDocs(pendingRoadmapsQuery);
-    const pendingRoadmaps = pendingRoadmapsSnapshot.size;
+    const pendingRoadmapsQuery = adminDb.collection(COLLECTIONS.ROADMAPS)
+      .where('status', '==', 'PENDING');
+    const pendingRoadmapsSnapshot = await pendingRoadmapsQuery.count().get();
+    const pendingRoadmaps = pendingRoadmapsSnapshot.data().count;
 
     // Get new roadmaps (last 7 days)
-    const newRoadmapsQuery = query(
-      collection(db, COLLECTIONS.ROADMAPS),
-      where('createdAt', '>=', sevenDaysAgoTimestamp)
-    );
-    const newRoadmapsSnapshot = await getDocs(newRoadmapsQuery);
-    const newRoadmaps = newRoadmapsSnapshot.size;
+    const newRoadmapsQuery = adminDb.collection(COLLECTIONS.ROADMAPS)
+      .where('createdAt', '>=', sevenDaysAgo);
+    const newRoadmapsSnapshot = await newRoadmapsQuery.count().get();
+    const newRoadmaps = newRoadmapsSnapshot.data().count;
 
     const stats: AdminStats = {
       totalUsers,

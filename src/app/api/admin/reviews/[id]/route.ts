@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { COLLECTIONS } from '@/lib/firebase/collections';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
 import { ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
-import { verifyAuthToken } from '@/lib/auth';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 
 // PATCH /api/admin/reviews/[id] - Approve or reject review
 export async function PATCH(
@@ -12,27 +10,42 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Verify admin authentication
-    const authResult = await verifyAuthToken(request);
-    if (!authResult.success || !authResult.user) {
+    // Check if Firebase Admin is properly configured
+    const adminDb = getAdminDb();
+    const adminAuth = getAdminAuth();
+    
+    if (!adminDb || !adminAuth) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
+        { status: 500 }
+      );
+    }
+
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
         { status: 401 }
       );
     }
 
-    if (authResult.user.role !== 'ADMIN') {
+    const token = authHeader.split('Bearer ')[1];
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    
+    // Get user to check if they're admin
+    const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(decodedToken.uid).get();
+    if (!userDoc.exists) {
       return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: '관리자 권한이 필요합니다.' } },
-        { status: 403 }
+        { success: false, error: { code: 'USER_NOT_FOUND', message: '사용자를 찾을 수 없습니다.' } },
+        { status: 404 }
       );
     }
 
-    // Check if Firestore is initialized
-    if (!db) {
+    const userData = userDoc.data();
+    if (userData.role !== 'ADMIN') {
       return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
-        { status: 500 }
+        { success: false, error: { code: 'FORBIDDEN', message: '관리자 권한이 필요합니다.' } },
+        { status: 403 }
       );
     }
 
@@ -48,10 +61,10 @@ export async function PATCH(
     }
 
     // Check if review exists
-    const reviewRef = doc(db, COLLECTIONS.REVIEWS, id);
-    const reviewDoc = await getDoc(reviewRef);
+    const reviewRef = adminDb.collection(COLLECTIONS.REVIEWS).doc(id);
+    const reviewDoc = await reviewRef.get();
 
-    if (!reviewDoc.exists()) {
+    if (!reviewDoc.exists) {
       return NextResponse.json(
         { success: false, error: { code: 'NOT_FOUND', message: '리뷰를 찾을 수 없습니다.' } },
         { status: 404 }
@@ -65,7 +78,7 @@ export async function PATCH(
     const updateData: any = {
       status: newStatus,
       updatedAt: new Date(),
-      moderatedBy: authResult.user.id,
+      moderatedBy: decodedToken.uid,
       moderatedAt: new Date(),
     };
 
@@ -73,20 +86,20 @@ export async function PATCH(
       updateData.moderationReason = reason;
     }
 
-    await updateDoc(reviewRef, updateData);
+    await reviewRef.update(updateData);
 
     // If approving review, update user role if needed
     if (action === 'approve' && reviewData.userId) {
       try {
-        const userRef = doc(db, COLLECTIONS.USERS, reviewData.userId);
-        const userDoc = await getDoc(userRef);
+        const userRef = adminDb.collection(COLLECTIONS.USERS).doc(reviewData.userId);
+        const userDoc = await userRef.get();
         
-        if (userDoc.exists()) {
+        if (userDoc.exists) {
           const userData = userDoc.data();
           
           // Promote user to AUTH_LOGIN if they're LOGIN_NOT_AUTH
           if (userData.role === 'LOGIN_NOT_AUTH') {
-            await updateDoc(userRef, {
+            await userRef.update({
               role: 'AUTH_LOGIN',
               updatedAt: new Date(),
             });

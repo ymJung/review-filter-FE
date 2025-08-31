@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { Roadmap } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -27,6 +28,8 @@ interface RoadmapWithDetails extends Roadmap {
 }
 
 export function RoadmapModerationPanel() {
+  const { firebaseUser } = useAuth();
+  const hasFetchedData = useRef(false);
   const [roadmaps, setRoadmaps] = useState<RoadmapWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,11 +37,33 @@ export function RoadmapModerationPanel() {
   const [filter, setFilter] = useState<'PENDING' | 'REJECTED' | 'ALL'>('PENDING');
 
   useEffect(() => {
-    fetchRoadmaps();
+    // Reset the flag when filter changes
+    hasFetchedData.current = false;
   }, [filter]);
+
+  useEffect(() => {
+    // Reset the flag when user changes
+    hasFetchedData.current = false;
+  }, [firebaseUser]);
+
+  useEffect(() => {
+    // Fetch data when user is available and we haven't fetched yet
+    if (firebaseUser && !hasFetchedData.current) {
+      hasFetchedData.current = true;
+      fetchRoadmaps();
+    }
+  }, [firebaseUser, filter]);
 
   const fetchRoadmaps = async () => {
     try {
+      // Wait for firebaseUser to be available
+      if (!firebaseUser) {
+        console.log('No firebaseUser available');
+        hasFetchedData.current = false; // Reset flag if no user
+        return;
+      }
+
+      console.log('Firebase user available, getting token...');
       setLoading(true);
       setError(null);
 
@@ -48,7 +73,17 @@ export function RoadmapModerationPanel() {
       }
       params.set('limit', '50');
 
-      const response = await fetch(`/api/admin/roadmaps?${params.toString()}`);
+      // Get auth token
+      const token = await firebaseUser.getIdToken();
+      console.log('Token retrieved:', token ? 'Available' : 'Not available');
+
+      const response = await fetch(`/api/admin/roadmaps?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      console.log('API response status:', response.status);
       if (!response.ok) {
         throw new Error('로드맵 목록을 불러오는데 실패했습니다.');
       }
@@ -62,6 +97,7 @@ export function RoadmapModerationPanel() {
     } catch (error: any) {
       console.error('Error fetching roadmaps:', error);
       setError(error.message);
+      hasFetchedData.current = false; // Reset flag on error so we can retry
     } finally {
       setLoading(false);
     }
@@ -69,12 +105,20 @@ export function RoadmapModerationPanel() {
 
   const handleRoadmapAction = async (roadmapId: string, action: 'approve' | 'reject', reason?: string) => {
     try {
+      if (!firebaseUser) {
+        throw new Error('인증이 필요합니다.');
+      }
+
       setProcessingId(roadmapId);
+
+      // Get auth token
+      const token = await firebaseUser.getIdToken();
 
       const response = await fetch(`/api/admin/roadmaps/${roadmapId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           action,

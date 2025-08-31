@@ -81,7 +81,7 @@ export const useRenderPerformance = (componentName: string) => {
 
   useEffect(() => {
     renderStartTime.current = performance.now();
-  });
+  }, []);
 
   useEffect(() => {
     const endTime = performance.now();
