@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminDb } from '@/lib/firebase/admin';
+import { getAdminDb, getAdminStorage } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { Review, ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
@@ -103,6 +103,57 @@ export async function GET(request: NextRequest) {
             const u = udoc.data() as any;
             withDetails.author = { id: udoc.id, nickname: u.nickname };
           }
+        }
+      } catch {}
+
+      // Fetch attached images (limit to 3)
+      try {
+        const imgsSnap = await adminDb
+          .collection(COLLECTIONS.REVIEW_IMAGES)
+          .where('reviewId', '==', doc.id)
+          .limit(3)
+          .get();
+
+        const adminStorage = getAdminStorage();
+        const bucket = adminStorage?.bucket();
+
+        const imageUrls: string[] = [];
+        for (const imgDoc of imgsSnap.docs) {
+          const img = imgDoc.data() as any;
+          let url = img.storageUrl as string | undefined;
+          const path = img.path as string | undefined;
+
+          if (url && url.includes('firebasestorage.googleapis.com')) {
+            imageUrls.push(url);
+            continue;
+          }
+
+          if (bucket && path) {
+            try {
+              const [signed] = await bucket.file(path).getSignedUrl({ action: 'read', expires: Date.now() + 60 * 60 * 1000 });
+              imageUrls.push(signed);
+              continue;
+            } catch {}
+          }
+
+          // Attempt path extraction from storage.googleapis.com URL
+          if (bucket && url && url.includes('storage.googleapis.com')) {
+            try {
+              const parts = new URL(url);
+              // pathname: /<bucket>/<path>
+              const segments = parts.pathname.split('/').slice(2); // drop leading '' and bucket
+              const inferredPath = decodeURIComponent(segments.join('/'));
+              const [signed] = await bucket.file(inferredPath).getSignedUrl({ action: 'read', expires: Date.now() + 60 * 60 * 1000 });
+              imageUrls.push(signed);
+              continue;
+            } catch {}
+          }
+
+          if (url) imageUrls.push(url); // fallback
+        }
+
+        if (imageUrls.length > 0) {
+          (withDetails as any).imageUrls = imageUrls;
         }
       } catch {}
 

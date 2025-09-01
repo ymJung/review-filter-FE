@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth, getAdminDb, getAdminStorage } from '@/lib/firebase/admin';
+import { randomUUID } from 'crypto';
 import { ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
 import { COLLECTIONS } from '@/lib/firebase/collections';
@@ -77,20 +78,26 @@ export async function POST(request: NextRequest) {
     // Convert file to buffer
     const fileBuffer = await file.arrayBuffer();
     
-    // Upload to Firebase Storage
+    // Generate a public download token and upload with metadata
+    const downloadToken = randomUUID();
     await bucket.file(fileName).save(Buffer.from(fileBuffer), {
       metadata: {
         contentType: file.type,
+        metadata: {
+          firebaseStorageDownloadTokens: downloadToken,
+        },
       },
     });
 
-    // Get download URL
-    const downloadURL = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+    // Build Firebase Storage download URL (token-based)
+    const encodedPath = encodeURIComponent(fileName);
+    const downloadURL = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
 
     // Save image info to Firestore
     const imageData = {
       reviewId,
       storageUrl: downloadURL,
+      path: fileName,
       createdAt: new Date(),
     };
 

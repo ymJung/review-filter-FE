@@ -5,6 +5,7 @@ export { Textarea } from './Textarea';
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './Card';
 export { Badge } from './Badge';
 export { Loading, LoadingSpinner, LoadingPage, LoadingOverlay } from './Loading';
+export { Modal } from './Modal';
 export { Alert } from './Alert';
 
 // Error handling and UX components

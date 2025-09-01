@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Loading } from '@/components/ui/Loading';
 import { Alert } from '@/components/ui/Alert';
 import { formatDate, formatRelativeTime, truncateText } from '@/lib/utils';
+import { Modal } from '@/components/ui/Modal';
 
 interface ReviewWithDetails extends Review {
   course?: Course;
@@ -16,6 +17,7 @@ interface ReviewWithDetails extends Review {
     id: string;
     nickname: string;
   };
+  imageUrls?: string[];
 }
 
 export function ReviewModerationPanel() {
@@ -26,6 +28,8 @@ export function ReviewModerationPanel() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'PENDING' | 'REJECTED' | 'ALL'>('PENDING');
   const { firebaseUser } = useAuth();
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!firebaseUser) return;
@@ -168,6 +172,8 @@ export function ReviewModerationPanel() {
 
   return (
     <div className="space-y-6">
+      {/* Lightbox */}
+      <ReviewImageLightbox open={lightboxOpen} url={lightboxUrl} onClose={() => setLightboxOpen(false)} />
       {/* Filter Tabs */}
       <Card>
         <CardContent className="p-4">
@@ -292,6 +298,28 @@ export function ReviewModerationPanel() {
                     </div>
                   </div>
 
+                  {/* Attached Images */}
+                  {review.imageUrls && review.imageUrls.length > 0 && (
+                    <div className="pt-3 border-t border-gray-200">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {review.imageUrls.map((url, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => { setLightboxUrl(url); setLightboxOpen(true); }}
+                            className="focus:outline-none"
+                          >
+                            <img
+                              src={url}
+                              alt={`리뷰 이미지 ${idx + 1}`}
+                              className="w-full h-32 object-cover rounded border hover:opacity-90 transition"
+                              loading="lazy"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Actions */}
                   {review.status === 'PENDING' && (
                     <div className="pt-3 border-t border-gray-200">
@@ -322,5 +350,18 @@ export function ReviewModerationPanel() {
         </div>
       )}
     </div>
+  );
+}
+
+// Lightbox Modal
+export function ReviewImageLightbox({ open, url, onClose }: { open: boolean; url: string | null; onClose: () => void }) {
+  return (
+    <Modal open={open} onClose={onClose} className="p-0" title="이미지 보기">
+      {url && (
+        <div className="max-h-[80vh] overflow-auto">
+          <img src={url} alt="리뷰 이미지 원본" className="max-w-full h-auto mx-auto" />
+        </div>
+      )}
+    </Modal>
   );
 }
