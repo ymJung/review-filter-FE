@@ -7,7 +7,6 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 import { User as FirebaseUser } from 'firebase/auth';
-import { NextRequest } from 'next/server';
 import { db } from '@/lib/firebase/config';
 import { getUsersCollection, getUserDoc } from '@/lib/firebase/collections';
 import { userConverter } from '@/lib/firebase/converters';
@@ -253,45 +252,4 @@ export const deleteUser = async (userId: string): Promise<void> => {
 };
 
 // Verify auth token from request headers
-export const verifyAuthToken = async (request: NextRequest): Promise<{
-  success: boolean;
-  user?: User;
-  error?: string;
-}> => {
-  try {
-    const authHeader = request.headers.get('authorization');
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return {
-        success: false,
-        error: 'Authorization header missing or invalid'
-      };
-    }
-
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    
-    // For now, we'll use a simple approach where the token is the user ID
-    // In a production environment, you would verify JWT tokens here
-    const userId = token;
-    
-    const user = await getUser(userId);
-    
-    if (!user) {
-      return {
-        success: false,
-        error: 'User not found'
-      };
-    }
-
-    return {
-      success: true,
-      user
-    };
-  } catch (error) {
-    console.error('Error verifying auth token:', error);
-    return {
-      success: false,
-      error: 'Token verification failed'
-    };
-  }
-};
+// Note: Server-only token verification moved to src/lib/auth/verifyServer.ts

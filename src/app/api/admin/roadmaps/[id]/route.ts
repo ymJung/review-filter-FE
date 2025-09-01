@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getAdminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
-import { verifyAuthToken } from '@/lib/auth';
+import { verifyAuthToken } from '@/lib/auth/verifyServer';
 
 // PATCH /api/admin/roadmaps/[id] - Approve or reject roadmap
 export async function PATCH(
@@ -28,10 +27,10 @@ export async function PATCH(
       );
     }
 
-    // Check if Firestore is initialized
-    if (!db) {
+    const adminDb = getAdminDb();
+    if (!adminDb) {
       return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
         { status: 500 }
       );
     }
@@ -48,10 +47,10 @@ export async function PATCH(
     }
 
     // Check if roadmap exists
-    const roadmapRef = doc(db, COLLECTIONS.ROADMAPS, id);
-    const roadmapDoc = await getDoc(roadmapRef);
+    const roadmapRef = adminDb.collection(COLLECTIONS.ROADMAPS).doc(id);
+    const roadmapDoc = await roadmapRef.get();
 
-    if (!roadmapDoc.exists()) {
+    if (!roadmapDoc.exists) {
       return NextResponse.json(
         { success: false, error: { code: 'NOT_FOUND', message: '로드맵을 찾을 수 없습니다.' } },
         { status: 404 }
@@ -71,7 +70,7 @@ export async function PATCH(
       updateData.moderationReason = reason;
     }
 
-    await updateDoc(roadmapRef, updateData);
+    await roadmapRef.update(updateData);
 
     const response: ApiResponse<{ status: string }> = {
       success: true,

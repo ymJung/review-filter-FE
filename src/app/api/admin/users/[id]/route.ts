@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getAdminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
-import { verifyAuthToken } from '@/lib/auth';
+import { verifyAuthToken } from '@/lib/auth/verifyServer';
 
 // PATCH /api/admin/users/[id] - Manage user (block, unblock, promote, demote)
 export async function PATCH(
@@ -28,10 +27,10 @@ export async function PATCH(
       );
     }
 
-    // Check if Firestore is initialized
-    if (!db) {
+    const adminDb = getAdminDb();
+    if (!adminDb) {
       return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
         { status: 500 }
       );
     }
@@ -48,17 +47,17 @@ export async function PATCH(
     }
 
     // Check if user exists
-    const userRef = doc(db, COLLECTIONS.USERS, id);
-    const userDoc = await getDoc(userRef);
+    const userRef = adminDb.collection(COLLECTIONS.USERS).doc(id);
+    const userDoc = await userRef.get();
 
-    if (!userDoc.exists()) {
+    if (!userDoc.exists) {
       return NextResponse.json(
         { success: false, error: { code: 'NOT_FOUND', message: '사용자를 찾을 수 없습니다.' } },
         { status: 404 }
       );
     }
 
-    const userData = userDoc.data();
+    const userData = userDoc.data() as any;
 
     // Prevent admin from modifying other admins
     if (userData.role === 'ADMIN' && authResult.user.id !== id) {
@@ -119,7 +118,7 @@ export async function PATCH(
       updateData.previousRole = userData.role;
     }
 
-    await updateDoc(userRef, updateData);
+    await userRef.update(updateData);
 
     const response: ApiResponse<{ role: string }> = {
       success: true,

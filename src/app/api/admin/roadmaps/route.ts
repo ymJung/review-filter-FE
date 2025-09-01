@@ -1,19 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  orderBy, 
-  limit as firestoreLimit,
-  doc,
-  getDoc
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getAdminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { Roadmap, ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
-import { verifyAuthToken } from '@/lib/auth';
+import { verifyAuthToken } from '@/lib/auth/verifyServer';
 
 interface RoadmapWithDetails extends Roadmap {
   author?: {
@@ -51,10 +41,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if Firestore is initialized
-    if (!db) {
+    const adminDb = getAdminDb();
+    if (!adminDb) {
       return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
         { status: 500 }
       );
     }
@@ -63,72 +53,64 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    // Build query
-    let roadmapsQuery = query(
-      collection(db, COLLECTIONS.ROADMAPS),
-      orderBy('createdAt', 'desc'),
-      firestoreLimit(limit)
-    );
-
+    // Build query (Admin SDK)
+    let q: any = adminDb.collection(COLLECTIONS.ROADMAPS);
     if (status && status !== 'ALL') {
-      roadmapsQuery = query(
-        collection(db, COLLECTIONS.ROADMAPS),
-        where('status', '==', status),
-        orderBy('createdAt', 'desc'),
-        firestoreLimit(limit)
-      );
+      q = q.where('status', '==', status);
     }
+    q = q.limit(limit);
 
-    const roadmapsSnapshot = await getDocs(roadmapsQuery);
+    const snap = await q.get();
+    const toDate = (v: any) => (v?.toDate ? v.toDate() : (v ? new Date(v) : undefined));
     const roadmaps: RoadmapWithDetails[] = [];
 
-    // Get additional data for each roadmap
-    for (const roadmapDoc of roadmapsSnapshot.docs) {
-      const roadmapData = roadmapDoc.data() as Roadmap;
-      const roadmapWithDetails: RoadmapWithDetails = {
-        ...roadmapData,
-        id: roadmapDoc.id,
+    for (const doc of snap.docs) {
+      const data = doc.data() as any;
+      const rm: Roadmap = {
+        id: doc.id,
+        title: data.title,
+        description: data.description,
+        courseTitle: data.courseTitle,
+        coursePlatform: data.coursePlatform,
+        nextCourses: data.nextCourses,
+        category: data.category,
+        userId: data.userId,
+        status: data.status,
+        viewCount: data.viewCount || 0,
+        createdAt: toDate(data.createdAt) || new Date(),
       };
 
-      // Get author information
+      const withDetails: RoadmapWithDetails = { ...rm } as any;
+
       try {
-        const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, roadmapData.userId));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          roadmapWithDetails.author = {
-            id: userDoc.id,
-            nickname: userData.nickname,
-          };
+        if (rm.userId) {
+          const udoc = await adminDb.collection(COLLECTIONS.USERS).doc(rm.userId).get();
+          if (udoc.exists) {
+            const u = udoc.data() as any;
+            withDetails.author = { id: udoc.id, nickname: u.nickname };
+          }
         }
-      } catch (error) {
-        console.warn(`Failed to fetch user ${roadmapData.userId}:`, error);
-      }
+      } catch {}
 
-      // Set course information from roadmap data
-      roadmapWithDetails.course = {
-        id: '', // No specific course ID in current structure
-        title: roadmapData.courseTitle,
-        platform: roadmapData.coursePlatform,
+      // Basic course fields already in roadmap document
+      withDetails.course = {
+        id: '',
+        title: rm.courseTitle,
+        platform: rm.coursePlatform,
       };
 
-      // Set next course information if exists
-      if (roadmapData.nextCourseTitle && roadmapData.nextCoursePlatform) {
-        roadmapWithDetails.nextCourse = {
-          id: '', // No specific course ID in current structure
-          title: roadmapData.nextCourseTitle,
-          platform: roadmapData.nextCoursePlatform,
+      if (data.nextCourseTitle && data.nextCoursePlatform) {
+        withDetails.nextCourse = {
+          id: '',
+          title: data.nextCourseTitle,
+          platform: data.nextCoursePlatform,
         };
       }
 
-      roadmaps.push(roadmapWithDetails);
+      roadmaps.push(withDetails);
     }
 
-    const response: ApiResponse<RoadmapWithDetails[]> = {
-      success: true,
-      data: roadmaps,
-    };
-
-    return NextResponse.json(response);
+    return NextResponse.json({ success: true, data: roadmaps } as ApiResponse<RoadmapWithDetails[]>);
   } catch (error) {
     console.error('Error getting admin roadmaps:', error);
     return NextResponse.json(

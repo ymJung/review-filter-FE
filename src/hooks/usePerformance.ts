@@ -222,7 +222,14 @@ export const usePerformanceBudget = (budgets: {
     }
 
     setViolations(newViolations);
-  }, [webVitals, memoryUsage, budgets]);
+  }, [
+    webVitals,
+    memoryUsage,
+    budgets?.maxRenderTime,
+    budgets?.maxMemoryUsage,
+    budgets?.maxBundleSize,
+    budgets?.maxApiResponseTime,
+  ]);
 
   return {
     violations,

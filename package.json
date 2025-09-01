@@ -16,9 +16,9 @@
   "description": "* 강의 후기를 모으는 플랫폼을 개발한다. * 로그인 사용자에게는 특정 액션 후 리뷰를 다 볼수 있는 혜택을 제공한다.  * 인증된 사용자에게는 리뷰, 광고없는 모드를 제공한다.",
   "main": "index.js",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3000",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "test": "jest",

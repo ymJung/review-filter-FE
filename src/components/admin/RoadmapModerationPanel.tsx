@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { Roadmap } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -32,10 +33,12 @@ export function RoadmapModerationPanel() {
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'PENDING' | 'REJECTED' | 'ALL'>('PENDING');
+  const { firebaseUser } = useAuth();
 
   useEffect(() => {
+    if (!firebaseUser) return;
     fetchRoadmaps();
-  }, [filter]);
+  }, [filter, firebaseUser]);
 
   const fetchRoadmaps = async () => {
     try {
@@ -48,7 +51,13 @@ export function RoadmapModerationPanel() {
       }
       params.set('limit', '50');
 
-      const response = await fetch(`/api/admin/roadmaps?${params.toString()}`);
+      let headers: HeadersInit = {};
+      try {
+        const token = await firebaseUser?.getIdToken();
+        if (token) headers = { Authorization: `Bearer ${token}` };
+      } catch {}
+
+      const response = await fetch(`/api/admin/roadmaps?${params.toString()}`, { headers });
       if (!response.ok) {
         throw new Error('로드맵 목록을 불러오는데 실패했습니다.');
       }
@@ -71,11 +80,15 @@ export function RoadmapModerationPanel() {
     try {
       setProcessingId(roadmapId);
 
+      let headers: HeadersInit = { 'Content-Type': 'application/json' };
+      try {
+        const token = await firebaseUser?.getIdToken();
+        if (token) headers = { ...headers, Authorization: `Bearer ${token}` };
+      } catch {}
+
       const response = await fetch(`/api/admin/roadmaps/${roadmapId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           action,
           reason,
@@ -166,7 +179,9 @@ export function RoadmapModerationPanel() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {roadmaps.map((roadmap) => (
+          {roadmaps.map((roadmap) => {
+            const createdAt = roadmap.createdAt instanceof Date ? roadmap.createdAt : new Date(roadmap.createdAt as any);
+            return (
             <Card key={roadmap.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -239,7 +254,7 @@ export function RoadmapModerationPanel() {
                         )}
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span>{formatRelativeTime(roadmap.createdAt)}</span>
+                        <span>{formatRelativeTime(createdAt)}</span>
                       </div>
                     </div>
                   </div>
@@ -270,7 +285,7 @@ export function RoadmapModerationPanel() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       )}
     </div>

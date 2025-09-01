@@ -6,28 +6,41 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Date formatting utilities
-export const formatDate = (date: Date, locale: string = 'ko-KR'): string => {
+// Date helpers and formatting utilities
+const toValidDate = (input: unknown): Date | null => {
+  const d = input instanceof Date ? input : (input ? new Date(input as any) : null);
+  if (!d || isNaN(d.getTime())) return null;
+  return d;
+};
+
+export const formatDate = (date: Date | string | number | null | undefined, locale: string = 'ko-KR'): string => {
+  const d = toValidDate(date);
+  if (!d) return '-';
   return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  }).format(date);
+  }).format(d);
 };
 
-export const formatDateTime = (date: Date, locale: string = 'ko-KR'): string => {
+export const formatDateTime = (date: Date | string | number | null | undefined, locale: string = 'ko-KR'): string => {
+  const d = toValidDate(date);
+  if (!d) return '-';
   return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(date);
+  }).format(d);
 };
 
-export const formatRelativeTime = (date: Date, locale: string = 'ko-KR'): string => {
+export const formatRelativeTime = (date: Date | string | number | null | undefined, locale: string = 'ko-KR'): string => {
+  const d = toValidDate(date);
+  if (!d) return '-';
+
   const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const diffInSeconds = Math.floor((now.getTime() - d.getTime()) / 1000);
 
   if (diffInSeconds < 60) {
     return '방금 전';
@@ -48,7 +61,7 @@ export const formatRelativeTime = (date: Date, locale: string = 'ko-KR'): string
     return `${diffInDays}일 전`;
   }
 
-  return formatDate(date, locale);
+  return formatDate(d, locale);
 };
 
 // Text utilities

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getAdminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
-import { verifyAuthToken } from '@/lib/auth';
+import { verifyAuthToken } from '@/lib/auth/verifyServer';
 
 // PATCH /api/admin/reviews/[id] - Approve or reject review
 export async function PATCH(
@@ -28,10 +27,10 @@ export async function PATCH(
       );
     }
 
-    // Check if Firestore is initialized
-    if (!db) {
+    const adminDb = getAdminDb();
+    if (!adminDb) {
       return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
         { status: 500 }
       );
     }
@@ -48,17 +47,17 @@ export async function PATCH(
     }
 
     // Check if review exists
-    const reviewRef = doc(db, COLLECTIONS.REVIEWS, id);
-    const reviewDoc = await getDoc(reviewRef);
+    const reviewRef = adminDb.collection(COLLECTIONS.REVIEWS).doc(id);
+    const reviewDoc = await reviewRef.get();
 
-    if (!reviewDoc.exists()) {
+    if (!reviewDoc.exists) {
       return NextResponse.json(
         { success: false, error: { code: 'NOT_FOUND', message: '리뷰를 찾을 수 없습니다.' } },
         { status: 404 }
       );
     }
 
-    const reviewData = reviewDoc.data();
+    const reviewData = reviewDoc.data() as any;
 
     // Update review status
     const newStatus = action === 'approve' ? 'APPROVED' : 'REJECTED';
@@ -73,20 +72,20 @@ export async function PATCH(
       updateData.moderationReason = reason;
     }
 
-    await updateDoc(reviewRef, updateData);
+    await reviewRef.update(updateData);
 
     // If approving review, update user role if needed
     if (action === 'approve' && reviewData.userId) {
       try {
-        const userRef = doc(db, COLLECTIONS.USERS, reviewData.userId);
-        const userDoc = await getDoc(userRef);
+        const userRef = adminDb.collection(COLLECTIONS.USERS).doc(reviewData.userId);
+        const userDoc = await userRef.get();
         
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
+        if (userDoc.exists) {
+          const userData = userDoc.data() as any;
           
           // Promote user to AUTH_LOGIN if they're LOGIN_NOT_AUTH
           if (userData.role === 'LOGIN_NOT_AUTH') {
-            await updateDoc(userRef, {
+            await userRef.update({
               role: 'AUTH_LOGIN',
               updatedAt: new Date(),
             });

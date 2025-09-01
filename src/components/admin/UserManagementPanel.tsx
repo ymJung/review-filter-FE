@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { User } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -25,10 +26,12 @@ export function UserManagementPanel() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'ALL' | 'BLOCKED_LOGIN' | 'AUTH_LOGIN' | 'AUTH_PREMIUM'>('ALL');
+  const { firebaseUser } = useAuth();
 
   useEffect(() => {
+    if (!firebaseUser) return;
     fetchUsers();
-  }, [filter, searchTerm]);
+  }, [filter, searchTerm, firebaseUser]);
 
   const fetchUsers = async () => {
     try {
@@ -44,7 +47,13 @@ export function UserManagementPanel() {
       }
       params.set('limit', '50');
 
-      const response = await fetch(`/api/admin/users?${params.toString()}`);
+      let headers: HeadersInit = {};
+      try {
+        const token = await firebaseUser?.getIdToken();
+        if (token) headers = { Authorization: `Bearer ${token}` };
+      } catch {}
+
+      const response = await fetch(`/api/admin/users?${params.toString()}`, { headers });
       if (!response.ok) {
         throw new Error('사용자 목록을 불러오는데 실패했습니다.');
       }
@@ -67,11 +76,15 @@ export function UserManagementPanel() {
     try {
       setProcessingId(userId);
 
+      let headers: HeadersInit = { 'Content-Type': 'application/json' };
+      try {
+        const token = await firebaseUser?.getIdToken();
+        if (token) headers = { ...headers, Authorization: `Bearer ${token}` };
+      } catch {}
+
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           action,
         }),
@@ -235,7 +248,12 @@ export function UserManagementPanel() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {users.map((user) => (
+          {users.map((user) => {
+            const createdAt = user.createdAt instanceof Date ? user.createdAt : new Date(user.createdAt as any);
+            const lastActivity = user.stats?.lastActivity instanceof Date || !user.stats?.lastActivity
+              ? (user.stats?.lastActivity as Date | undefined)
+              : new Date(user.stats!.lastActivity as any);
+            return (
             <Card key={user.id}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -253,17 +271,17 @@ export function UserManagementPanel() {
                       </div>
                       
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
-                        <span>가입: {formatRelativeTime(user.createdAt)}</span>
+                        <span>가입: {formatRelativeTime(createdAt)}</span>
                         {user.stats && (
                           <>
                             <span>•</span>
                             <span>리뷰 {user.stats.reviewCount}개</span>
                             <span>•</span>
                             <span>로드맵 {user.stats.roadmapCount}개</span>
-                            {user.stats.lastActivity && (
+                            {lastActivity && (
                               <>
                                 <span>•</span>
-                                <span>최근 활동: {formatRelativeTime(user.stats.lastActivity)}</span>
+                                <span>최근 활동: {formatRelativeTime(lastActivity)}</span>
                               </>
                             )}
                           </>
@@ -282,7 +300,7 @@ export function UserManagementPanel() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       )}
     </div>

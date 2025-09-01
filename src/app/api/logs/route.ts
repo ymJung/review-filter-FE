@@ -61,7 +61,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-    try {
+  try {
+    if (process.env.NODE_ENV !== 'production') {
+      return NextResponse.json({ logs: [] });
+    }
         // This endpoint could be used by admins to retrieve logs
         const authHeader = request.headers.get('authorization');
 
@@ -107,7 +110,7 @@ export async function GET(request: NextRequest) {
                 { status: 401 }
             );
         }
-    } catch (error) {
+  } catch (error) {
         console.error('Error retrieving logs:', error);
         return NextResponse.json(
             { error: 'Failed to retrieve logs' },

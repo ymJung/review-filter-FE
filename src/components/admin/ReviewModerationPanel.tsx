@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { Review, Course, User } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -23,10 +24,12 @@ export function ReviewModerationPanel() {
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'PENDING' | 'REJECTED' | 'ALL'>('PENDING');
+  const { firebaseUser } = useAuth();
 
   useEffect(() => {
+    if (!firebaseUser) return;
     fetchReviews();
-  }, [filter]);
+  }, [filter, firebaseUser]);
 
   const fetchReviews = async () => {
     try {
@@ -39,7 +42,13 @@ export function ReviewModerationPanel() {
       }
       params.set('limit', '50');
 
-      const response = await fetch(`/api/admin/reviews?${params.toString()}`);
+      let headers: HeadersInit = {};
+      try {
+        const token = await firebaseUser?.getIdToken();
+        if (token) headers = { Authorization: `Bearer ${token}` };
+      } catch {}
+
+      const response = await fetch(`/api/admin/reviews?${params.toString()}` , { headers });
       if (!response.ok) {
         throw new Error('리뷰 목록을 불러오는데 실패했습니다.');
       }
@@ -62,11 +71,15 @@ export function ReviewModerationPanel() {
     try {
       setProcessingId(reviewId);
 
+      let headers: HeadersInit = { 'Content-Type': 'application/json' };
+      try {
+        const token = await firebaseUser?.getIdToken();
+        if (token) headers = { ...headers, Authorization: `Bearer ${token}` };
+      } catch {}
+
       const response = await fetch(`/api/admin/reviews/${reviewId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           action,
           reason,
@@ -175,7 +188,12 @@ export function ReviewModerationPanel() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {reviews.map((review) => (
+          {reviews.map((review) => {
+            const createdAt = review.createdAt instanceof Date ? review.createdAt : new Date(review.createdAt as any);
+            const studyPeriod = review.studyPeriod instanceof Date || !review.studyPeriod
+              ? (review.studyPeriod as Date | undefined)
+              : new Date(review.studyPeriod as any);
+            return (
             <Card key={review.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -243,15 +261,15 @@ export function ReviewModerationPanel() {
                         {review.author && (
                           <span className="font-medium">{review.author.nickname}</span>
                         )}
-                        {review.studyPeriod && (
+                        {studyPeriod && (
                           <>
                             <span>•</span>
-                            <span>수강: {formatDate(review.studyPeriod)}</span>
+                            <span>수강: {formatDate(studyPeriod)}</span>
                           </>
                         )}
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span>{formatRelativeTime(review.createdAt)}</span>
+                        <span>{formatRelativeTime(createdAt)}</span>
                       </div>
                     </div>
                   </div>
@@ -282,7 +300,7 @@ export function ReviewModerationPanel() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       )}
     </div>

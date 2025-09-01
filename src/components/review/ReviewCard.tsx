@@ -43,6 +43,13 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
   const canEdit = isOwner || canModerate;
   const canDeleteReview = isOwner || canModerate;
 
+  // Defensive date parsing to avoid runtime errors during render
+  const createdAt = review.createdAt instanceof Date ? review.createdAt : new Date(review.createdAt as any);
+  const updatedAt = review.updatedAt instanceof Date ? review.updatedAt : new Date(review.updatedAt as any);
+  const studyPeriod = review.studyPeriod instanceof Date || !review.studyPeriod
+    ? (review.studyPeriod as Date | undefined)
+    : new Date(review.studyPeriod as any);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'APPROVED':
@@ -176,16 +183,16 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
               {review.author && (
                 <span className="font-medium">{review.author.nickname}</span>
               )}
-              {!compact && review.studyPeriod && (
+              {!compact && studyPeriod && (
                 <>
                   <span>•</span>
-                  <span>수강: {formatDate(review.studyPeriod)}</span>
+                  <span>수강: {formatDate(studyPeriod)}</span>
                 </>
               )}
             </div>
             <div className="flex items-center space-x-2">
-              <span>{formatRelativeTime(review.createdAt)}</span>
-              {!compact && review.updatedAt.getTime() !== review.createdAt.getTime() && (
+              <span>{formatRelativeTime(createdAt)}</span>
+              {!compact && updatedAt && createdAt && updatedAt.getTime() !== createdAt.getTime() && (
                 <>
                   <span>•</span>
                   <span className="text-xs">수정됨</span>

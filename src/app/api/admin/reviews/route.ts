@@ -1,19 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  orderBy, 
-  limit as firestoreLimit,
-  doc,
-  getDoc
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getAdminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { Review, ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
-import { verifyAuthToken } from '@/lib/auth';
+import { verifyAuthToken } from '@/lib/auth/verifyServer';
 
 interface ReviewWithDetails extends Review {
   course?: {
@@ -48,10 +38,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if Firestore is initialized
-    if (!db) {
+    const adminDb = getAdminDb();
+    if (!adminDb) {
       return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
         { status: 500 }
       );
     }
@@ -60,73 +50,66 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    // Build query
-    let reviewsQuery = query(
-      collection(db, COLLECTIONS.REVIEWS),
-      orderBy('createdAt', 'desc'),
-      firestoreLimit(limit)
-    );
-
+    let q: any = adminDb.collection(COLLECTIONS.REVIEWS);
     if (status && status !== 'ALL') {
-      reviewsQuery = query(
-        collection(db, COLLECTIONS.REVIEWS),
-        where('status', '==', status),
-        orderBy('createdAt', 'desc'),
-        firestoreLimit(limit)
-      );
+      q = q.where('status', '==', status);
     }
+    q = q.limit(limit);
 
-    const reviewsSnapshot = await getDocs(reviewsQuery);
+    const snap = await q.get();
+    const toDate = (v: any) => (v?.toDate ? v.toDate() : (v ? new Date(v) : undefined));
+
     const reviews: ReviewWithDetails[] = [];
-
-    // Get additional data for each review
-    for (const reviewDoc of reviewsSnapshot.docs) {
-      const reviewData = reviewDoc.data() as Review;
-      const reviewWithDetails: ReviewWithDetails = {
-        ...reviewData,
-        id: reviewDoc.id,
+    for (const doc of snap.docs) {
+      const data = doc.data() as any;
+      const review: Review = {
+        id: doc.id,
+        courseId: data.courseId,
+        userId: data.userId,
+        content: data.content,
+        rating: data.rating,
+        status: data.status,
+        studyPeriod: toDate(data.studyPeriod),
+        positivePoints: data.positivePoints,
+        negativePoints: data.negativePoints,
+        changes: data.changes,
+        recommendedFor: data.recommendedFor,
+        createdAt: toDate(data.createdAt) || new Date(),
+        updatedAt: toDate(data.updatedAt) || new Date(),
       };
 
-      // Get course information
-      try {
-        const courseDoc = await getDoc(doc(db, COLLECTIONS.COURSES, reviewData.courseId));
-        if (courseDoc.exists()) {
-          const courseData = courseDoc.data();
-          reviewWithDetails.course = {
-            id: courseDoc.id,
-            title: courseData.title,
-            platform: courseData.platform,
-            category: courseData.category,
-            instructor: courseData.instructor,
-          };
-        }
-      } catch (error) {
-        console.warn(`Failed to fetch course ${reviewData.courseId}:`, error);
-      }
+      const withDetails: ReviewWithDetails = { ...review } as any;
 
-      // Get author information
       try {
-        const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, reviewData.userId));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          reviewWithDetails.author = {
-            id: userDoc.id,
-            nickname: userData.nickname,
-          };
+        if (review.courseId) {
+          const cdoc = await adminDb.collection(COLLECTIONS.COURSES).doc(review.courseId).get();
+          if (cdoc.exists) {
+            const c = cdoc.data() as any;
+            withDetails.course = {
+              id: cdoc.id,
+              title: c.title,
+              platform: c.platform,
+              category: c.category,
+              instructor: c.instructor,
+            };
+          }
         }
-      } catch (error) {
-        console.warn(`Failed to fetch user ${reviewData.userId}:`, error);
-      }
+      } catch {}
 
-      reviews.push(reviewWithDetails);
+      try {
+        if (review.userId) {
+          const udoc = await adminDb.collection(COLLECTIONS.USERS).doc(review.userId).get();
+          if (udoc.exists) {
+            const u = udoc.data() as any;
+            withDetails.author = { id: udoc.id, nickname: u.nickname };
+          }
+        }
+      } catch {}
+
+      reviews.push(withDetails);
     }
 
-    const response: ApiResponse<ReviewWithDetails[]> = {
-      success: true,
-      data: reviews,
-    };
-
-    return NextResponse.json(response);
+    return NextResponse.json({ success: true, data: reviews } as ApiResponse<ReviewWithDetails[]>);
   } catch (error) {
     console.error('Error getting admin reviews:', error);
     return NextResponse.json(

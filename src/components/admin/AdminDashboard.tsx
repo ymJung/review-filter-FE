@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Loading } from '@/components/ui/Loading';
@@ -24,17 +25,28 @@ export function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { firebaseUser } = useAuth();
 
   useEffect(() => {
+    // Wait for Firebase user to be ready to include ID token
+    if (!firebaseUser) return;
     fetchAdminStats();
-  }, []);
+  }, [firebaseUser]);
 
   const fetchAdminStats = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/admin/stats');
+      let headers: HeadersInit = {};
+      try {
+        const token = await firebaseUser?.getIdToken();
+        if (token) {
+          headers = { ...headers, Authorization: `Bearer ${token}` };
+        }
+      } catch {}
+
+      const response = await fetch('/api/admin/stats', { headers });
       if (!response.ok) {
         throw new Error('통계를 불러오는데 실패했습니다.');
       }
