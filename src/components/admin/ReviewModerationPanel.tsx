@@ -20,6 +20,7 @@ interface ReviewWithDetails extends Review {
 
 export function ReviewModerationPanel() {
   const [reviews, setReviews] = useState<ReviewWithDetails[]>([]);
+  const [counts, setCounts] = useState<{ pending: number; rejected: number; all: number }>({ pending: 0, rejected: 0, all: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -41,6 +42,8 @@ export function ReviewModerationPanel() {
         params.set('status', filter);
       }
       params.set('limit', '50');
+      // Cache buster to avoid any intermediary caching
+      params.set('_ts', Date.now().toString());
 
       let headers: HeadersInit = {};
       try {
@@ -48,7 +51,7 @@ export function ReviewModerationPanel() {
         if (token) headers = { Authorization: `Bearer ${token}` };
       } catch {}
 
-      const response = await fetch(`/api/admin/reviews?${params.toString()}` , { headers });
+      const response = await fetch(`/api/admin/reviews?${params.toString()}` , { headers, cache: 'no-store' });
       if (!response.ok) {
         throw new Error('리뷰 목록을 불러오는데 실패했습니다.');
       }
@@ -56,6 +59,16 @@ export function ReviewModerationPanel() {
       const data = await response.json();
       if (data.success) {
         setReviews(data.data || []);
+        if (data.meta?.counts) {
+          setCounts(data.meta.counts);
+        } else {
+          // Fallback if server didn't send counts
+          setCounts({
+            pending: (data.data || []).filter((r: any) => r.status === 'PENDING').length,
+            rejected: (data.data || []).filter((r: any) => r.status === 'REJECTED').length,
+            all: (data.data || []).length,
+          });
+        }
       } else {
         throw new Error(data.error?.message || '리뷰 목록을 불러오는데 실패했습니다.');
       }
@@ -92,12 +105,17 @@ export function ReviewModerationPanel() {
 
       const data = await response.json();
       if (data.success) {
-        // 목록에서 해당 리뷰 업데이트
-        setReviews(prev => prev.map(review => 
-          review.id === reviewId 
-            ? { ...review, status: action === 'approve' ? 'APPROVED' : 'REJECTED' }
-            : review
-        ));
+        const newStatus = action === 'approve' ? 'APPROVED' : 'REJECTED';
+        setReviews(prev => {
+          const updated = prev.map(r => r.id === reviewId ? { ...r, status: newStatus } : r);
+          // 현재 필터와 맞지 않으면 목록에서 제거
+          if (filter !== 'ALL') {
+            return updated.filter(r => r.status === filter);
+          }
+          return updated;
+        });
+        // 안정성을 위해 최신 데이터 재조회
+        fetchReviews();
       } else {
         throw new Error(data.error?.message || '리뷰 처리에 실패했습니다.');
       }
@@ -155,9 +173,9 @@ export function ReviewModerationPanel() {
         <CardContent className="p-4">
           <div className="flex space-x-4">
             {[
-              { key: 'PENDING' as const, label: '검수 대기', count: reviews.filter(r => r.status === 'PENDING').length },
-              { key: 'REJECTED' as const, label: '거부됨', count: reviews.filter(r => r.status === 'REJECTED').length },
-              { key: 'ALL' as const, label: '전체', count: reviews.length },
+              { key: 'PENDING' as const, label: '검수 대기', count: counts.pending },
+              { key: 'REJECTED' as const, label: '거부됨', count: counts.rejected },
+              { key: 'ALL' as const, label: '전체', count: counts.all },
             ].map((tab) => (
               <button
                 key={tab.key}

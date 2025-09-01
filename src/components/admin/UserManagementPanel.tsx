@@ -46,6 +46,7 @@ export function UserManagementPanel() {
         params.set('search', searchTerm);
       }
       params.set('limit', '50');
+      params.set('_ts', Date.now().toString());
 
       let headers: HeadersInit = {};
       try {
@@ -53,7 +54,7 @@ export function UserManagementPanel() {
         if (token) headers = { Authorization: `Bearer ${token}` };
       } catch {}
 
-      const response = await fetch(`/api/admin/users?${params.toString()}`, { headers });
+      const response = await fetch(`/api/admin/users?${params.toString()}`, { headers, cache: 'no-store' });
       if (!response.ok) {
         throw new Error('사용자 목록을 불러오는데 실패했습니다.');
       }
@@ -96,12 +97,16 @@ export function UserManagementPanel() {
 
       const data = await response.json();
       if (data.success) {
-        // 목록에서 해당 사용자 업데이트
-        setUsers(prev => prev.map(user => 
-          user.id === userId 
-            ? { ...user, role: data.data.role }
-            : user
-        ));
+        const newRole = data.data.role as User['role'];
+        setUsers(prev => {
+          const updated = prev.map(u => u.id === userId ? { ...u, role: newRole } : u);
+          if (filter !== 'ALL') {
+            return updated.filter(u => u.role === filter);
+          }
+          return updated;
+        });
+        // 최신 목록 재조회로 정합성 확보
+        fetchUsers();
       } else {
         throw new Error(data.error?.message || '사용자 처리에 실패했습니다.');
       }

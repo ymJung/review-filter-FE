@@ -57,7 +57,7 @@ export function RoadmapModerationPanel() {
         if (token) headers = { Authorization: `Bearer ${token}` };
       } catch {}
 
-      const response = await fetch(`/api/admin/roadmaps?${params.toString()}`, { headers });
+      const response = await fetch(`/api/admin/roadmaps?${params.toString()}`, { headers, cache: 'no-store' });
       if (!response.ok) {
         throw new Error('로드맵 목록을 불러오는데 실패했습니다.');
       }
@@ -101,12 +101,15 @@ export function RoadmapModerationPanel() {
 
       const data = await response.json();
       if (data.success) {
-        // 목록에서 해당 로드맵 업데이트
-        setRoadmaps(prev => prev.map(roadmap => 
-          roadmap.id === roadmapId 
-            ? { ...roadmap, status: action === 'approve' ? 'APPROVED' : 'REJECTED' }
-            : roadmap
-        ));
+        const newStatus = action === 'approve' ? 'APPROVED' : 'REJECTED';
+        setRoadmaps(prev => {
+          const updated = prev.map(r => r.id === roadmapId ? { ...r, status: newStatus } : r);
+          if (filter !== 'ALL') {
+            return updated.filter(r => r.status === filter);
+          }
+          return updated;
+        });
+        fetchRoadmaps();
       } else {
         throw new Error(data.error?.message || '로드맵 처리에 실패했습니다.');
       }

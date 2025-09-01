@@ -109,7 +109,26 @@ export async function GET(request: NextRequest) {
       reviews.push(withDetails);
     }
 
-    return NextResponse.json({ success: true, data: reviews } as ApiResponse<ReviewWithDetails[]>);
+    // Compute counts for tabs
+    let pendingCount = 0, rejectedCount = 0, allCount = 0;
+    try {
+      const [pSnap, rSnap, aSnap] = await Promise.all([
+        adminDb.collection(COLLECTIONS.REVIEWS).where('status', '==', 'PENDING').get(),
+        adminDb.collection(COLLECTIONS.REVIEWS).where('status', '==', 'REJECTED').get(),
+        adminDb.collection(COLLECTIONS.REVIEWS).get(),
+      ]);
+      pendingCount = pSnap.size;
+      rejectedCount = rSnap.size;
+      allCount = aSnap.size;
+    } catch (e) {
+      // ignore count errors, keep zeroes
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      data: reviews,
+      meta: { counts: { pending: pendingCount, rejected: rejectedCount, all: allCount } },
+    } as any);
   } catch (error) {
     console.error('Error getting admin reviews:', error);
     return NextResponse.json(
@@ -118,3 +137,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+export const dynamic = 'force-dynamic';
