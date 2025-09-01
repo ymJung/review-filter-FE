@@ -123,7 +123,7 @@ export interface ReviewFormData {
   negativePoints?: string;
   changes?: string;
   recommendedFor?: string;
-  certificationImage: File | null;
+  certificationImages: File[];
 }
 
 export interface RoadmapFormData {

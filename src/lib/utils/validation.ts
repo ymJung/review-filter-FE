@@ -22,8 +22,10 @@ export const validateReview = (data: Partial<ReviewFormData>): { isValid: boolea
     errors.push('평점을 1~5점 사이로 선택해주세요.');
   }
 
-  if (!data.certificationImage) {
-    errors.push('결제 인증 이미지를 업로드해주세요.');
+  if (!data.certificationImages || data.certificationImages.length === 0) {
+    errors.push('결제 인증 이미지를 1장 이상 업로드해주세요.');
+  } else if (data.certificationImages.length > 10) {
+    errors.push('이미지는 최대 10장까지 업로드할 수 있습니다.');
   }
 
   return {

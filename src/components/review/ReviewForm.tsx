@@ -43,14 +43,14 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
     negativePoints: '',
     changes: '',
     recommendedFor: '',
-    certificationImage: null,
+    certificationImages: [],
   });
 
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(initialCourse || null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [success, setSuccess] = useState('');
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   const handleInputChange = (field: keyof ReviewFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -96,41 +96,38 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    // Validate file
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/heic'];
     const maxSize = 5 * 1024 * 1024; // 5MB
 
-    if (!allowedTypes.includes(file.type)) {
-      setErrors(['JPEG, JPG, PNG, GIF, HEIC 형식의 이미지만 업로드 가능합니다.']);
-      return;
-    }
-
-    if (file.size > maxSize) {
-      setErrors(['파일 크기는 5MB 이하여야 합니다.']);
-      return;
-    }
-
-    try {
-      // Compress image if needed
-      const compressedFile = file.size > 1024 * 1024 ? await compressImage(file) : file;
-      
-      setFormData(prev => ({ ...prev, certificationImage: compressedFile }));
-      
-      // Create preview
+    const compressedFiles: File[] = [];
+    for (const file of files) {
+      if (!allowedTypes.includes(file.type)) {
+        setErrors(['JPEG, JPG, PNG, GIF, HEIC 형식의 이미지만 업로드 가능합니다.']);
+        continue;
+      }
+      if (file.size > maxSize) {
+        setErrors(['파일 크기는 5MB 이하여야 합니다.']);
+        continue;
+      }
+      const compressed = file.size > 1024 * 1024 ? await compressImage(file) : file;
+      compressedFiles.push(compressed);
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(compressedFile);
-      
-      setErrors([]);
-    } catch (error) {
-      console.error('Error processing image:', error);
-      setErrors(['이미지 처리 중 오류가 발생했습니다.']);
+      reader.onload = (ev) => setImagePreviews(prev => [...prev, ev.target?.result as string]);
+      reader.readAsDataURL(compressed);
     }
+    setFormData(prev => ({ ...prev, certificationImages: [...prev.certificationImages, ...compressedFiles] }));
+    setErrors([]);
+  };
+
+  const removeImageAt = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      certificationImages: prev.certificationImages.filter((_, i) => i !== index),
+    }));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -193,9 +190,11 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         throw new Error('리뷰 생성에 실패했습니다.');
       }
 
-      // Upload certification image if provided
-      if (formData.certificationImage) {
-        await uploadCertificationImage(formData.certificationImage, review.id, token);
+      // Upload certification images if provided
+      if (formData.certificationImages && formData.certificationImages.length > 0) {
+        for (const file of formData.certificationImages) {
+          await uploadCertificationImage(file, review.id, token);
+        }
       }
 
       setSuccess('리뷰가 성공적으로 작성되었습니다. 검수 후 공개됩니다.');
@@ -213,10 +212,10 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         negativePoints: '',
         changes: '',
         recommendedFor: '',
-        certificationImage: null,
+        certificationImages: [],
       });
       setSelectedCourse(null);
-      setImagePreview(null);
+      setImagePreviews([]);
 
       // Call success callback or redirect
       if (onSuccess) {
@@ -448,7 +447,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
             />
           </div>
 
-          {/* Certification Image */}
+          {/* Certification Images */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">결제 인증 이미지 *</h3>
             <p className="text-sm text-gray-600">
@@ -461,22 +460,32 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
                 type="file"
                 accept="image/jpeg,image/jpg,image/png,image/gif,image/heic"
                 onChange={handleImageChange}
+                multiple
                 className="hidden"
                 id="certification-image"
-                required
+                required={formData.certificationImages.length === 0}
               />
               <label
                 htmlFor="certification-image"
                 className="cursor-pointer flex flex-col items-center justify-center"
               >
-                {imagePreview ? (
-                  <div className="space-y-2">
-                    <img
-                      src={imagePreview}
-                      alt="인증 이미지 미리보기"
-                      className="max-w-xs max-h-48 object-contain rounded"
-                    />
-                    <p className="text-sm text-gray-600">클릭하여 다른 이미지 선택</p>
+                {imagePreviews.length > 0 ? (
+                  <div className="w-full">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                      {imagePreviews.map((src, idx) => (
+                        <div key={idx} className="relative group">
+                          <img src={src} alt={`인증 이미지 ${idx + 1}`} className="w-full h-28 object-cover rounded border" />
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); removeImageAt(idx); }}
+                            className="absolute top-1 right-1 bg-white/80 hover:bg-white text-gray-700 rounded-full px-2 py-0.5 text-xs shadow"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-sm text-gray-600 text-center">이미지를 클릭하여 추가로 선택하세요 (최대 10장)</p>
                   </div>
                 ) : (
                   <div className="text-center">
@@ -485,7 +494,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
                     </svg>
                     <p className="text-gray-600">클릭하여 이미지 업로드</p>
                     <p className="text-sm text-gray-500 mt-1">
-                      JPEG, JPG, PNG, GIF, HEIC (최대 5MB)
+                      JPEG, JPG, PNG, GIF, HEIC (최대 5MB, 최대 10장)
                     </p>
                   </div>
                 )}
