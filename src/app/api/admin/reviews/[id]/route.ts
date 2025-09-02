@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+<<<<<<< HEAD
 import { getAdminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
 import { verifyAuthToken } from '@/lib/auth/verifyServer';
+=======
+import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
+import { ApiResponse } from '@/types';
+import { handleError } from '@/lib/utils';
+import { COLLECTIONS } from '@/lib/firebase/collections';
+>>>>>>> origin/main
 
 // PATCH /api/admin/reviews/[id] - Approve or reject review
 export async function PATCH(
@@ -11,27 +18,50 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Verify admin authentication
-    const authResult = await verifyAuthToken(request);
-    if (!authResult.success || !authResult.user) {
+    // Check if Firebase Admin is properly configured
+    const adminDb = getAdminDb();
+    const adminAuth = getAdminAuth();
+    
+    if (!adminDb || !adminAuth) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
+        { status: 500 }
+      );
+    }
+
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
         { status: 401 }
       );
     }
 
-    if (authResult.user.role !== 'ADMIN') {
+    const token = authHeader.split('Bearer ')[1];
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    
+    // Get user to check if they're admin
+    const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(decodedToken.uid).get();
+    if (!userDoc.exists) {
       return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: '관리자 권한이 필요합니다.' } },
-        { status: 403 }
+        { success: false, error: { code: 'USER_NOT_FOUND', message: '사용자를 찾을 수 없습니다.' } },
+        { status: 404 }
       );
     }
 
+<<<<<<< HEAD
     const adminDb = getAdminDb();
     if (!adminDb) {
       return NextResponse.json(
         { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
         { status: 500 }
+=======
+    const userData = userDoc.data();
+    if (userData.role !== 'ADMIN') {
+      return NextResponse.json(
+        { success: false, error: { code: 'FORBIDDEN', message: '관리자 권한이 필요합니다.' } },
+        { status: 403 }
+>>>>>>> origin/main
       );
     }
 
@@ -64,7 +94,7 @@ export async function PATCH(
     const updateData: any = {
       status: newStatus,
       updatedAt: new Date(),
-      moderatedBy: authResult.user.id,
+      moderatedBy: decodedToken.uid,
       moderatedAt: new Date(),
     };
 
@@ -81,7 +111,11 @@ export async function PATCH(
         const userDoc = await userRef.get();
         
         if (userDoc.exists) {
+<<<<<<< HEAD
           const userData = userDoc.data() as any;
+=======
+          const userData = userDoc.data();
+>>>>>>> origin/main
           
           // Promote user to AUTH_LOGIN if they're LOGIN_NOT_AUTH
           if (userData.role === 'LOGIN_NOT_AUTH') {

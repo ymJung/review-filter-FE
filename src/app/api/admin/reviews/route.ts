@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+<<<<<<< HEAD
 import { getAdminDb, getAdminStorage } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { Review, ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
 import { verifyAuthToken } from '@/lib/auth/verifyServer';
+=======
+import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
+import { Review, ApiResponse, User, Course } from '@/types';
+import { handleError } from '@/lib/utils';
+import { COLLECTIONS } from '@/lib/firebase/collections';
+>>>>>>> origin/main
 
 interface ReviewWithDetails extends Review {
   course?: {
@@ -22,27 +29,50 @@ interface ReviewWithDetails extends Review {
 // GET /api/admin/reviews - Get reviews for moderation
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin authentication
-    const authResult = await verifyAuthToken(request);
-    if (!authResult.success || !authResult.user) {
+    // Check if Firebase Admin is properly configured
+    const adminDb = getAdminDb();
+    const adminAuth = getAdminAuth();
+    
+    if (!adminDb || !adminAuth) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
+        { status: 500 }
+      );
+    }
+
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
         { status: 401 }
       );
     }
 
-    if (authResult.user.role !== 'ADMIN') {
+    const token = authHeader.split('Bearer ')[1];
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    
+    // Get user to check if they're admin
+    const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(decodedToken.uid).get();
+    if (!userDoc.exists) {
       return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: '관리자 권한이 필요합니다.' } },
-        { status: 403 }
+        { success: false, error: { code: 'USER_NOT_FOUND', message: '사용자를 찾을 수 없습니다.' } },
+        { status: 404 }
       );
     }
 
+<<<<<<< HEAD
     const adminDb = getAdminDb();
     if (!adminDb) {
       return NextResponse.json(
         { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
         { status: 500 }
+=======
+    const userData = userDoc.data() as User;
+    if (userData.role !== 'ADMIN') {
+      return NextResponse.json(
+        { success: false, error: { code: 'FORBIDDEN', message: '관리자 권한이 필요합니다.' } },
+        { status: 403 }
+>>>>>>> origin/main
       );
     }
 
@@ -50,6 +80,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const limit = parseInt(searchParams.get('limit') || '50');
 
+<<<<<<< HEAD
     let q: any = adminDb.collection(COLLECTIONS.REVIEWS);
     if (status && status !== 'ALL') {
       q = q.where('status', '==', status);
@@ -79,8 +110,53 @@ export async function GET(request: NextRequest) {
       };
 
       const withDetails: ReviewWithDetails = { ...review } as any;
+=======
+    // Build query using Firebase Admin SDK
+    let reviewsQuery: any = adminDb.collection(COLLECTIONS.REVIEWS);
+    
+    if (status && status !== 'ALL') {
+      reviewsQuery = reviewsQuery.where('status', '==', status);
+    }
+    
+    reviewsQuery = reviewsQuery
+      .orderBy('createdAt', 'desc')
+      .limit(limit);
+
+    const reviewsSnapshot = await reviewsQuery.get();
+    const reviews: ReviewWithDetails[] = [];
+
+    // Get additional data for each review
+    for (const reviewDoc of reviewsSnapshot.docs) {
+      const reviewData = reviewDoc.data() as Review;
+      const reviewWithDetails: ReviewWithDetails = {
+        ...reviewData,
+        id: reviewDoc.id,
+        createdAt: reviewData.createdAt?.toDate() || new Date(),
+        updatedAt: reviewData.updatedAt?.toDate() || new Date(),
+        studyPeriod: reviewData.studyPeriod?.toDate(),
+        moderatedAt: reviewData.moderatedAt?.toDate(),
+      };
+
+      // Get course information
+      try {
+        const courseDoc = await adminDb.collection(COLLECTIONS.COURSES).doc(reviewData.courseId).get();
+        if (courseDoc.exists) {
+          const courseData = courseDoc.data();
+          reviewWithDetails.course = {
+            id: courseDoc.id,
+            title: courseData.title,
+            platform: courseData.platform,
+            category: courseData.category,
+            instructor: courseData.instructor,
+          };
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch course ${reviewData.courseId}:`, error);
+      }
+>>>>>>> origin/main
 
       try {
+<<<<<<< HEAD
         if (review.courseId) {
           const cdoc = await adminDb.collection(COLLECTIONS.COURSES).doc(review.courseId).get();
           if (cdoc.exists) {
@@ -93,6 +169,15 @@ export async function GET(request: NextRequest) {
               instructor: c.instructor,
             };
           }
+=======
+        const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(reviewData.userId).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          reviewWithDetails.author = {
+            id: userDoc.id,
+            nickname: userData.nickname,
+          };
+>>>>>>> origin/main
         }
       } catch {}
 

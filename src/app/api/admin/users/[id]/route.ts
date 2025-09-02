@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+<<<<<<< HEAD
 import { getAdminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
 import { verifyAuthToken } from '@/lib/auth/verifyServer';
+=======
+import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
+import { COLLECTIONS } from '@/lib/firebase/collections';
+import { ApiResponse } from '@/types';
+import { handleError } from '@/lib/utils';
+>>>>>>> origin/main
 
 // PATCH /api/admin/users/[id] - Manage user (block, unblock, promote, demote)
 export async function PATCH(
@@ -11,22 +18,46 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Verify admin authentication
-    const authResult = await verifyAuthToken(request);
-    if (!authResult.success || !authResult.user) {
+    // Check if Firebase Admin is properly configured
+    const adminDb = getAdminDb();
+    const adminAuth = getAdminAuth();
+    
+    if (!adminDb || !adminAuth) {
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
+        { status: 500 }
+      );
+    }
+
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: '인증이 필요합니다.' } },
         { status: 401 }
       );
     }
 
-    if (authResult.user.role !== 'ADMIN') {
+    const token = authHeader.split('Bearer ')[1];
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    
+    // Get user to check if they're admin
+    const adminUserDoc = await adminDb.collection(COLLECTIONS.USERS).doc(decodedToken.uid).get();
+    if (!adminUserDoc.exists) {
+      return NextResponse.json(
+        { success: false, error: { code: 'USER_NOT_FOUND', message: '사용자를 찾을 수 없습니다.' } },
+        { status: 404 }
+      );
+    }
+
+    const adminUserData = adminUserDoc.data();
+    if (adminUserData.role !== 'ADMIN') {
       return NextResponse.json(
         { success: false, error: { code: 'FORBIDDEN', message: '관리자 권한이 필요합니다.' } },
         { status: 403 }
       );
     }
 
+<<<<<<< HEAD
     const adminDb = getAdminDb();
     if (!adminDb) {
       return NextResponse.json(
@@ -35,9 +66,11 @@ export async function PATCH(
       );
     }
 
+=======
+>>>>>>> origin/main
     const { id } = params;
     const body = await request.json();
-    const { action } = body;
+    const { action, reason } = body;
 
     if (!action || !['block', 'unblock', 'promote', 'demote'].includes(action)) {
       return NextResponse.json(
@@ -59,63 +92,52 @@ export async function PATCH(
 
     const userData = userDoc.data() as any;
 
-    // Prevent admin from modifying other admins
-    if (userData.role === 'ADMIN' && authResult.user.id !== id) {
+    // Prevent users from managing themselves
+    if (decodedToken.uid === id) {
       return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: '다른 관리자를 수정할 수 없습니다.' } },
+        { success: false, error: { code: 'FORBIDDEN', message: '자신의 계정을 관리할 수 없습니다.' } },
         { status: 403 }
       );
     }
 
     // Determine new role based on action
-    let newRole: string;
-    
+    let newRole = userData.role;
     switch (action) {
       case 'block':
         newRole = 'BLOCKED_LOGIN';
         break;
       case 'unblock':
-        // Restore to previous role or default to LOGIN_NOT_AUTH
-        newRole = userData.previousRole || 'LOGIN_NOT_AUTH';
+        // Unblock to appropriate role based on content history
+        newRole = userData.reviewCount > 0 || userData.roadmapCount > 0 
+          ? 'AUTH_LOGIN' 
+          : 'LOGIN_NOT_AUTH';
         break;
       case 'promote':
-        if (userData.role === 'LOGIN_NOT_AUTH' || userData.role === 'AUTH_LOGIN') {
+        if (userData.role === 'LOGIN_NOT_AUTH') {
+          newRole = 'AUTH_LOGIN';
+        } else if (userData.role === 'AUTH_LOGIN') {
           newRole = 'AUTH_PREMIUM';
-        } else {
-          return NextResponse.json(
-            { success: false, error: { code: 'INVALID_ACTION', message: '승격할 수 없는 사용자입니다.' } },
-            { status: 400 }
-          );
         }
         break;
       case 'demote':
         if (userData.role === 'AUTH_PREMIUM') {
           newRole = 'AUTH_LOGIN';
-        } else {
-          return NextResponse.json(
-            { success: false, error: { code: 'INVALID_ACTION', message: '강등할 수 없는 사용자입니다.' } },
-            { status: 400 }
-          );
+        } else if (userData.role === 'AUTH_LOGIN') {
+          newRole = 'LOGIN_NOT_AUTH';
         }
         break;
-      default:
-        return NextResponse.json(
-          { success: false, error: { code: 'INVALID_ACTION', message: '유효하지 않은 액션입니다.' } },
-          { status: 400 }
-        );
     }
 
-    // Update user role
+    // Update user
     const updateData: any = {
       role: newRole,
       updatedAt: new Date(),
-      moderatedBy: authResult.user.id,
-      moderatedAt: new Date(),
     };
 
-    // Store previous role when blocking
-    if (action === 'block') {
-      updateData.previousRole = userData.role;
+    if (reason) {
+      updateData.managementReason = reason;
+      updateData.managedBy = decodedToken.uid;
+      updateData.managedAt = new Date();
     }
 
     await userRef.update(updateData);
@@ -127,7 +149,7 @@ export async function PATCH(
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Error processing user:', error);
+    console.error('Error managing user:', error);
     return NextResponse.json(
       { success: false, error: { code: 'SERVER_ERROR', message: handleError(error) } },
       { status: 500 }

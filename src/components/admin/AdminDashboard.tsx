@@ -1,6 +1,10 @@
 'use client';
 
+<<<<<<< HEAD
 import { useState, useEffect } from 'react';
+=======
+import { useState, useEffect, useRef } from 'react';
+>>>>>>> origin/main
 import { useAuth } from '@/components/auth/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -22,22 +26,44 @@ interface AdminStats {
 }
 
 export function AdminDashboard() {
+  const { firebaseUser } = useAuth();
+  const hasFetchedData = useRef(false);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { firebaseUser } = useAuth();
 
   useEffect(() => {
+<<<<<<< HEAD
     // Wait for Firebase user to be ready to include ID token
     if (!firebaseUser) return;
     fetchAdminStats();
+=======
+    // Reset the flag when user changes
+    hasFetchedData.current = false;
+  }, [firebaseUser]);
+
+  useEffect(() => {
+    // Fetch data when user is available and we haven't fetched yet
+    if (firebaseUser && !hasFetchedData.current) {
+      hasFetchedData.current = true;
+      fetchAdminStats();
+    }
+>>>>>>> origin/main
   }, [firebaseUser]);
 
   const fetchAdminStats = async () => {
     try {
+      // Wait for firebaseUser to be available
+      if (!firebaseUser) {
+        hasFetchedData.current = false; // Reset flag if no user
+        return;
+      }
+
       setLoading(true);
       setError(null);
 
+<<<<<<< HEAD
       let headers: HeadersInit = {};
       try {
         const token = await firebaseUser?.getIdToken();
@@ -47,6 +73,17 @@ export function AdminDashboard() {
       } catch {}
 
       const response = await fetch('/api/admin/stats', { headers });
+=======
+      // Get auth token
+      const token = await firebaseUser.getIdToken();
+
+      const response = await fetch('/api/admin/stats', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+>>>>>>> origin/main
       if (!response.ok) {
         throw new Error('통계를 불러오는데 실패했습니다.');
       }
@@ -60,6 +97,7 @@ export function AdminDashboard() {
     } catch (error: any) {
       console.error('Error fetching admin stats:', error);
       setError(error.message);
+      hasFetchedData.current = false; // Reset flag on error so we can retry
     } finally {
       setLoading(false);
     }

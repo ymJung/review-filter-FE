@@ -6,6 +6,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+<<<<<<< HEAD
 // Date helpers and formatting utilities
 const toValidDate = (input: unknown): Date | null => {
   const d = input instanceof Date ? input : (input ? new Date(input as any) : null);
@@ -16,6 +17,15 @@ const toValidDate = (input: unknown): Date | null => {
 export const formatDate = (date: Date | string | number | null | undefined, locale: string = 'ko-KR'): string => {
   const d = toValidDate(date);
   if (!d) return '-';
+=======
+// Date formatting utilities
+export const formatDate = (date: Date | undefined, locale: string = 'ko-KR'): string => {
+  // Handle undefined or invalid dates
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return '날짜 없음';
+  }
+  
+>>>>>>> origin/main
   return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
     month: 'long',
@@ -23,22 +33,40 @@ export const formatDate = (date: Date | string | number | null | undefined, loca
   }).format(d);
 };
 
+<<<<<<< HEAD
 export const formatDateTime = (date: Date | string | number | null | undefined, locale: string = 'ko-KR'): string => {
   const d = toValidDate(date);
   if (!d) return '-';
+=======
+export const formatDateTime = (date: Date | undefined, locale: string = 'ko-KR'): string => {
+  // Handle undefined or invalid dates
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return '날짜 없음';
+  }
+  
+>>>>>>> origin/main
   return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
-    month: 'long',
+    month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   }).format(d);
 };
 
+<<<<<<< HEAD
 export const formatRelativeTime = (date: Date | string | number | null | undefined, locale: string = 'ko-KR'): string => {
   const d = toValidDate(date);
   if (!d) return '-';
 
+=======
+export const formatRelativeTime = (date: Date | undefined, locale: string = 'ko-KR'): string => {
+  // Handle undefined or invalid dates
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return '날짜 없음';
+  }
+  
+>>>>>>> origin/main
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - d.getTime()) / 1000);
 
