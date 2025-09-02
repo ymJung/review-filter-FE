@@ -134,11 +134,11 @@ export function MyRoadmaps({ className = '' }: MyRoadmapsProps) {
                     <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
                       {roadmap.courseTitle}
                     </div>
-                    {roadmap.nextCourseTitle && (
+                    {roadmap.nextCourses && roadmap.nextCourses.length > 0 && (
                       <>
                         <span className="text-gray-400">→</span>
                         <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-                          {roadmap.nextCourseTitle}
+                          {roadmap.nextCourses[0].title}
                         </div>
                       </>
                     )}

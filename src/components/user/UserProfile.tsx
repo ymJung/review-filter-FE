@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { MypageService } from '@/lib/services/mypageService';
-import { UserStats } from '@/types';
+import { updateCurrentUser, validateNickname } from '@/lib/services/userService';
+import { MypageService, UserStats as MyUserStats } from '@/lib/services/mypageService';
 import { formatDate } from '@/lib/utils';
 import { USER_ROLES } from '@/lib/constants';
 
@@ -12,8 +12,8 @@ interface UserProfileProps {
 }
 
 export const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
-  const { user, firebaseUser } = useAuth();
-  const [stats, setStats] = useState<UserStats | null>(null);
+  const { user, firebaseUser, refreshUser } = useAuth();
+  const [stats, setStats] = useState<MyUserStats | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [nickname, setNickname] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,7 +58,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
   };
 
   const handleSaveNickname = async () => {
-    if (!user) return;
+    if (!user || !firebaseUser) return;
 
     const validation = validateNickname(nickname);
     if (!validation.isValid) {

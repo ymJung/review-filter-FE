@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { Roadmap } from '@/types';
+import { Roadmap, RoadmapStatus } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -101,7 +101,7 @@ export function RoadmapModerationPanel() {
 
       const data = await response.json();
       if (data.success) {
-        const newStatus = action === 'approve' ? 'APPROVED' : 'REJECTED';
+        const newStatus: RoadmapStatus = action === 'approve' ? 'APPROVED' : 'REJECTED';
         setRoadmaps(prev => {
           const updated = prev.map(r => r.id === roadmapId ? { ...r, status: newStatus } : r);
           if (filter !== 'ALL') {

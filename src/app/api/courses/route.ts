@@ -120,10 +120,15 @@ export async function POST(request: NextRequest) {
     if (!existingSnapshot.empty) {
       // Course exists, return it
       const existingDoc = existingSnapshot.docs[0];
+      const data = existingDoc.data() as any;
       const existingCourse: Course = {
         id: existingDoc.id,
-        ...existingDoc.data(),
-        createdAt: existingDoc.data().createdAt?.toDate() || new Date(),
+        platform: data.platform,
+        title: data.title,
+        instructor: data.instructor,
+        category: data.category,
+        viewCount: data.viewCount ?? 0,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
       };
       
       const response: ApiResponse<Course> = {

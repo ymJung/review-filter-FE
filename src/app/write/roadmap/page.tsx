@@ -48,8 +48,7 @@ function WriteRoadmapContent() {
           description: roadmap.description,
           courseTitle: roadmap.courseTitle,
           coursePlatform: roadmap.coursePlatform,
-          nextCourseTitle: roadmap.nextCourseTitle,
-          nextCoursePlatform: roadmap.nextCoursePlatform,
+          nextCourses: roadmap.nextCourses || [],
         });
       } catch (error: any) {
         console.error('Error loading roadmap for edit:', error);

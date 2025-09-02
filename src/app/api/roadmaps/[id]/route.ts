@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
-import { Roadmap, ApiResponse, User } from '@/types';
+import { Roadmap, ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 
@@ -28,25 +28,28 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    const roadmapData = roadmapDoc.data();
+    const data = roadmapDoc.data() as any;
     const roadmap: Roadmap = {
       id: roadmapDoc.id,
-      ...roadmapData,
-      createdAt: roadmapData.createdAt?.toDate() || new Date(),
+      title: data.title,
+      description: data.description,
+      courseTitle: data.courseTitle,
+      coursePlatform: data.coursePlatform,
+      nextCourses: data.nextCourses,
+      category: data.category,
+      userId: data.userId,
+      status: data.status,
+      viewCount: data.viewCount ?? 0,
+      createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
     };
 
     // Get user information (nickname only for privacy)
-    let user: User | null = null;
+    let author: { id: string; nickname: string } | null = null;
     if (roadmap.userId) {
       const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(roadmap.userId).get();
       if (userDoc.exists) {
-        const userData = userDoc.data();
-        user = {
-          id: userDoc.id,
-          ...userData,
-          createdAt: userData.createdAt?.toDate() || new Date(),
-          updatedAt: userData.updatedAt?.toDate() || new Date(),
-        };
+        const userData = userDoc.data() as any;
+        author = { id: userDoc.id, nickname: userData.nickname };
       }
     }
 
@@ -69,8 +72,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
           // Admin can view all roadmaps
           const requestingUserDoc = await adminDb.collection(COLLECTIONS.USERS).doc(decodedToken.uid).get();
           if (requestingUserDoc.exists) {
-            const requestingUserData = requestingUserDoc.data();
-            if (requestingUserData.role === 'ADMIN') {
+            const requestingUserData = requestingUserDoc.data() as any;
+            if (requestingUserData && requestingUserData.role === 'ADMIN') {
               canViewFullContent = true;
             }
           }
@@ -92,10 +95,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const responseData = {
       ...roadmap,
       viewCount: roadmap.status === 'APPROVED' ? roadmap.viewCount + 1 : roadmap.viewCount,
-      author: user ? {
-        id: user.id,
-        nickname: user.nickname,
-      } : null,
+      author,
       // Hide detailed content for non-approved roadmaps from other users
       ...(canViewFullContent ? {} : {
         description: '검수 중인 로드맵입니다.',
@@ -158,11 +158,19 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    const roadmapData = roadmapDoc.data();
+    const roadmapData = roadmapDoc.data() as any;
     const roadmap: Roadmap = {
       id: roadmapDoc.id,
-      ...roadmapData,
-      createdAt: roadmapData.createdAt?.toDate() || new Date(),
+      title: roadmapData.title,
+      description: roadmapData.description,
+      courseTitle: roadmapData.courseTitle,
+      coursePlatform: roadmapData.coursePlatform,
+      nextCourses: roadmapData.nextCourses,
+      category: roadmapData.category,
+      userId: roadmapData.userId,
+      status: roadmapData.status,
+      viewCount: roadmapData.viewCount ?? 0,
+      createdAt: roadmapData.createdAt?.toDate ? roadmapData.createdAt.toDate() : new Date(),
     };
 
     // Check permissions
@@ -210,11 +218,19 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // Get updated roadmap
     const updatedDoc = await adminDb.collection(COLLECTIONS.ROADMAPS).doc(id).get();
-    const updatedData = updatedDoc.data();
+    const updatedData = updatedDoc.data() as any;
     const updatedRoadmap: Roadmap = {
       id: updatedDoc.id,
-      ...updatedData,
-      createdAt: updatedData.createdAt?.toDate() || new Date(),
+      title: updatedData.title,
+      description: updatedData.description,
+      courseTitle: updatedData.courseTitle,
+      coursePlatform: updatedData.coursePlatform,
+      nextCourses: updatedData.nextCourses,
+      category: updatedData.category,
+      userId: updatedData.userId,
+      status: updatedData.status,
+      viewCount: updatedData.viewCount ?? 0,
+      createdAt: updatedData.createdAt?.toDate ? updatedData.createdAt.toDate() : new Date(),
     };
 
     const response: ApiResponse<Roadmap> = {
@@ -269,11 +285,19 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       );
     }
 
-    const roadmapData = roadmapDoc.data();
+    const roadmapData = roadmapDoc.data() as any;
     const roadmap: Roadmap = {
       id: roadmapDoc.id,
-      ...roadmapData,
-      createdAt: roadmapData.createdAt?.toDate() || new Date(),
+      title: roadmapData.title,
+      description: roadmapData.description,
+      courseTitle: roadmapData.courseTitle,
+      coursePlatform: roadmapData.coursePlatform,
+      nextCourses: roadmapData.nextCourses,
+      category: roadmapData.category,
+      userId: roadmapData.userId,
+      status: roadmapData.status,
+      viewCount: roadmapData.viewCount ?? 0,
+      createdAt: roadmapData.createdAt?.toDate ? roadmapData.createdAt.toDate() : new Date(),
     };
 
     // Check permissions

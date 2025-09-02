@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     const snap = await q.get();
     const toDate = (v: any) => (v?.toDate ? v.toDate() : (v ? new Date(v) : undefined));
-    let users: UserWithStats[] = snap.docs.map(d => {
+    let users: UserWithStats[] = snap.docs.map((d: any) => {
       const data = d.data() as any;
       return {
         id: d.id,

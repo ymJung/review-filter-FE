@@ -44,22 +44,19 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, title, className, c
         role="dialog"
         aria-modal="true"
       >
-        {(title || onClose) && (
-          <div className="flex items-center justify-between px-4 py-3 border-b">
-            <h3 className="text-sm font-medium text-gray-900">{title}</h3>
-            <button
-              onClick={onClose}
-              aria-label="Close"
-              className="p-1 rounded hover:bg-gray-100"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          <h3 className="text-sm font-medium text-gray-900">{title}</h3>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="p-1 rounded hover:bg-gray-100"
+          >
+            ✕
+          </button>
+        </div>
         <div className="p-2">{children}</div>
       </div>
     </div>,
     document.body,
   );
 };
-

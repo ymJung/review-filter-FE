@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { Review, Course, User } from '@/types';
+import { Review, Course, User, ReviewStatus } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -109,7 +109,7 @@ export function ReviewModerationPanel() {
 
       const data = await response.json();
       if (data.success) {
-        const newStatus = action === 'approve' ? 'APPROVED' : 'REJECTED';
+        const newStatus: ReviewStatus = action === 'approve' ? 'APPROVED' : 'REJECTED';
         setReviews(prev => {
           const updated = prev.map(r => r.id === reviewId ? { ...r, status: newStatus } : r);
           // 현재 필터와 맞지 않으면 목록에서 제거

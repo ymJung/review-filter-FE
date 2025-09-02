@@ -128,15 +128,15 @@ export function RoadmapCard({
         </div>
 
         {/* Next Course */}
-        {roadmap.nextCourseTitle && (
+        {roadmap.nextCourses && roadmap.nextCourses.length > 0 && (
           <div className="bg-green-50 p-3 rounded-lg">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               <span className="text-sm font-medium text-green-700">다음 강의</span>
             </div>
             <div className="ml-4">
-              <p className="font-medium text-gray-900">{roadmap.nextCourseTitle}</p>
-              <p className="text-sm text-gray-600">{roadmap.nextCoursePlatform}</p>
+              <p className="font-medium text-gray-900">{roadmap.nextCourses[0].title}</p>
+              <p className="text-sm text-gray-600">{roadmap.nextCourses[0].platform}</p>
             </div>
           </div>
         )}
