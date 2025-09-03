@@ -1,10 +1,6 @@
 'use client';
 
-<<<<<<< HEAD
-import { useState, useEffect } from 'react';
-=======
 import { useState, useEffect, useRef } from 'react';
->>>>>>> origin/main
 import { useAuth } from '@/components/auth/AuthProvider';
 import { User } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -32,15 +28,9 @@ export function UserManagementPanel() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'ALL' | 'BLOCKED_LOGIN' | 'AUTH_LOGIN' | 'AUTH_PREMIUM'>('ALL');
-  const { firebaseUser } = useAuth();
 
   useEffect(() => {
-<<<<<<< HEAD
-    if (!firebaseUser) return;
-    fetchUsers();
-  }, [filter, searchTerm, firebaseUser]);
-=======
-    // Reset the flag when user changes or filter/search changes
+    // Reset the flag when user or filter/search changes
     hasFetchedData.current = false;
   }, [firebaseUser, filter, searchTerm]);
 
@@ -51,7 +41,6 @@ export function UserManagementPanel() {
       fetchUsers();
     }
   }, [firebaseUser, filter, searchTerm]);
->>>>>>> origin/main
 
   const fetchUsers = async () => {
     try {
@@ -74,25 +63,15 @@ export function UserManagementPanel() {
       params.set('limit', '50');
       params.set('_ts', Date.now().toString());
 
-<<<<<<< HEAD
-      let headers: HeadersInit = {};
-      try {
-        const token = await firebaseUser?.getIdToken();
-        if (token) headers = { Authorization: `Bearer ${token}` };
-      } catch {}
-
-      const response = await fetch(`/api/admin/users?${params.toString()}`, { headers, cache: 'no-store' });
-=======
       // Get auth token
       const token = await firebaseUser.getIdToken();
 
       const response = await fetch(`/api/admin/users?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
+        cache: 'no-store',
       });
-      
->>>>>>> origin/main
       if (!response.ok) {
         throw new Error('사용자 목록을 불러오는데 실패했습니다.');
       }
@@ -120,17 +99,6 @@ export function UserManagementPanel() {
 
       setProcessingId(userId);
 
-<<<<<<< HEAD
-      let headers: HeadersInit = { 'Content-Type': 'application/json' };
-      try {
-        const token = await firebaseUser?.getIdToken();
-        if (token) headers = { ...headers, Authorization: `Bearer ${token}` };
-      } catch {}
-
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: 'PATCH',
-        headers,
-=======
       // Get auth token
       const token = await firebaseUser.getIdToken();
 
@@ -138,9 +106,8 @@ export function UserManagementPanel() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
->>>>>>> origin/main
         body: JSON.stringify({
           action,
         }),

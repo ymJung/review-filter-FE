@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-<<<<<<< HEAD
-import { getAdminDb } from '@/lib/firebase/admin';
-import { COLLECTIONS } from '@/lib/firebase/collections';
-import { ApiResponse } from '@/types';
-import { handleError } from '@/lib/utils';
-import { verifyAuthToken } from '@/lib/auth/verifyServer';
-=======
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
->>>>>>> origin/main
 
 interface AdminStats {
   totalUsers: number;
@@ -60,101 +52,52 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const userData = userDoc.data();
+    const userData = userDoc.data() as any;
     if (userData.role !== 'ADMIN') {
       return NextResponse.json(
         { success: false, error: { code: 'FORBIDDEN', message: '관리자 권한이 필요합니다.' } },
         { status: 403 }
       );
     }
-<<<<<<< HEAD
-    // Use Admin SDK if available
-    const adminDb = getAdminDb();
-    if (!adminDb) {
-      const empty: AdminStats = {
-        totalUsers: 0,
-        totalReviews: 0,
-        totalRoadmaps: 0,
-        pendingReviews: 0,
-        pendingRoadmaps: 0,
-        blockedUsers: 0,
-        recentActivity: { newUsers: 0, newReviews: 0, newRoadmaps: 0 },
-      };
-      return NextResponse.json({ success: true, data: empty } as ApiResponse<AdminStats>);
-    }
-=======
->>>>>>> origin/main
+    // Admin SDK ready
 
     // Calculate date for recent activity (7 days ago)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-<<<<<<< HEAD
     // Counters with safe fallbacks
     const safeCount = async (q: any): Promise<number> => {
-      try { const snap = await q.get(); return snap.size; } catch { return 0; }
+      try {
+        const snap = await q.get();
+        return snap.size;
+      } catch {
+        return 0;
+      }
     };
 
     const totalUsers = await safeCount(adminDb.collection(COLLECTIONS.USERS));
-    const blockedUsers = await safeCount(adminDb.collection(COLLECTIONS.USERS).where('role', '==', 'BLOCKED_LOGIN'));
-    const newUsers = await safeCount(adminDb.collection(COLLECTIONS.USERS).where('createdAt', '>=', sevenDaysAgo));
+    const blockedUsers = await safeCount(
+      adminDb.collection(COLLECTIONS.USERS).where('role', '==', 'BLOCKED_LOGIN')
+    );
+    const newUsers = await safeCount(
+      adminDb.collection(COLLECTIONS.USERS).where('createdAt', '>=', sevenDaysAgo)
+    );
 
     const totalReviews = await safeCount(adminDb.collection(COLLECTIONS.REVIEWS));
-    const pendingReviews = await safeCount(adminDb.collection(COLLECTIONS.REVIEWS).where('status', '==', 'PENDING'));
-    const newReviews = await safeCount(adminDb.collection(COLLECTIONS.REVIEWS).where('createdAt', '>=', sevenDaysAgo));
+    const pendingReviews = await safeCount(
+      adminDb.collection(COLLECTIONS.REVIEWS).where('status', '==', 'PENDING')
+    );
+    const newReviews = await safeCount(
+      adminDb.collection(COLLECTIONS.REVIEWS).where('createdAt', '>=', sevenDaysAgo)
+    );
 
     const totalRoadmaps = await safeCount(adminDb.collection(COLLECTIONS.ROADMAPS));
-    const pendingRoadmaps = await safeCount(adminDb.collection(COLLECTIONS.ROADMAPS).where('status', '==', 'PENDING'));
-    const newRoadmaps = await safeCount(adminDb.collection(COLLECTIONS.ROADMAPS).where('createdAt', '>=', sevenDaysAgo));
-=======
-    // Get total users
-    const usersSnapshot = await adminDb.collection(COLLECTIONS.USERS).count().get();
-    const totalUsers = usersSnapshot.data().count;
-
-    // Get blocked users count
-    const blockedUsersQuery = adminDb.collection(COLLECTIONS.USERS)
-      .where('role', '==', 'BLOCKED_LOGIN');
-    const blockedUsersSnapshot = await blockedUsersQuery.count().get();
-    const blockedUsers = blockedUsersSnapshot.data().count;
-
-    // Get new users (last 7 days)
-    const newUsersQuery = adminDb.collection(COLLECTIONS.USERS)
-      .where('createdAt', '>=', sevenDaysAgo);
-    const newUsersSnapshot = await newUsersQuery.count().get();
-    const newUsers = newUsersSnapshot.data().count;
-
-    // Get total reviews
-    const reviewsSnapshot = await adminDb.collection(COLLECTIONS.REVIEWS).count().get();
-    const totalReviews = reviewsSnapshot.data().count;
-
-    // Get pending reviews
-    const pendingReviewsQuery = adminDb.collection(COLLECTIONS.REVIEWS)
-      .where('status', '==', 'PENDING');
-    const pendingReviewsSnapshot = await pendingReviewsQuery.count().get();
-    const pendingReviews = pendingReviewsSnapshot.data().count;
-
-    // Get new reviews (last 7 days)
-    const newReviewsQuery = adminDb.collection(COLLECTIONS.REVIEWS)
-      .where('createdAt', '>=', sevenDaysAgo);
-    const newReviewsSnapshot = await newReviewsQuery.count().get();
-    const newReviews = newReviewsSnapshot.data().count;
-
-    // Get total roadmaps
-    const roadmapsSnapshot = await adminDb.collection(COLLECTIONS.ROADMAPS).count().get();
-    const totalRoadmaps = roadmapsSnapshot.data().count;
-
-    // Get pending roadmaps
-    const pendingRoadmapsQuery = adminDb.collection(COLLECTIONS.ROADMAPS)
-      .where('status', '==', 'PENDING');
-    const pendingRoadmapsSnapshot = await pendingRoadmapsQuery.count().get();
-    const pendingRoadmaps = pendingRoadmapsSnapshot.data().count;
-
-    // Get new roadmaps (last 7 days)
-    const newRoadmapsQuery = adminDb.collection(COLLECTIONS.ROADMAPS)
-      .where('createdAt', '>=', sevenDaysAgo);
-    const newRoadmapsSnapshot = await newRoadmapsQuery.count().get();
-    const newRoadmaps = newRoadmapsSnapshot.data().count;
->>>>>>> origin/main
+    const pendingRoadmaps = await safeCount(
+      adminDb.collection(COLLECTIONS.ROADMAPS).where('status', '==', 'PENDING')
+    );
+    const newRoadmaps = await safeCount(
+      adminDb.collection(COLLECTIONS.ROADMAPS).where('createdAt', '>=', sevenDaysAgo)
+    );
 
     const stats: AdminStats = {
       totalUsers,

@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-<<<<<<< HEAD
-import { getAdminDb } from '@/lib/firebase/admin';
-import { COLLECTIONS } from '@/lib/firebase/collections';
-import { ApiResponse } from '@/types';
-import { handleError } from '@/lib/utils';
-import { verifyAuthToken } from '@/lib/auth/verifyServer';
-=======
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
->>>>>>> origin/main
 
 // PATCH /api/admin/users/[id] - Manage user (block, unblock, promote, demote)
 export async function PATCH(
@@ -49,7 +41,7 @@ export async function PATCH(
       );
     }
 
-    const adminUserData = adminUserDoc.data();
+    const adminUserData = adminUserDoc.data() as any;
     if (adminUserData.role !== 'ADMIN') {
       return NextResponse.json(
         { success: false, error: { code: 'FORBIDDEN', message: '관리자 권한이 필요합니다.' } },
@@ -57,17 +49,6 @@ export async function PATCH(
       );
     }
 
-<<<<<<< HEAD
-    const adminDb = getAdminDb();
-    if (!adminDb) {
-      return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
-        { status: 500 }
-      );
-    }
-
-=======
->>>>>>> origin/main
     const { id } = params;
     const body = await request.json();
     const { action, reason } = body;

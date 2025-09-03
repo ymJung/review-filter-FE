@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-<<<<<<< HEAD
-import { getAdminDb } from '@/lib/firebase/admin';
-import { COLLECTIONS } from '@/lib/firebase/collections';
-import { ApiResponse } from '@/types';
-import { handleError } from '@/lib/utils';
-import { verifyAuthToken } from '@/lib/auth/verifyServer';
-=======
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
->>>>>>> origin/main
 
 // PATCH /api/admin/roadmaps/[id] - Approve or reject roadmap
 export async function PATCH(
@@ -18,10 +10,8 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check if Firebase Admin is properly configured
     const adminDb = getAdminDb();
     const adminAuth = getAdminAuth();
-    
     if (!adminDb || !adminAuth) {
       return NextResponse.json(
         { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
@@ -39,29 +29,13 @@ export async function PATCH(
 
     const token = authHeader.split('Bearer ')[1];
     const decodedToken = await adminAuth.verifyIdToken(token);
-    
-    // Get user to check if they're admin
-    const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(decodedToken.uid).get();
-    if (!userDoc.exists) {
-      return NextResponse.json(
-        { success: false, error: { code: 'USER_NOT_FOUND', message: '사용자를 찾을 수 없습니다.' } },
-        { status: 404 }
-      );
-    }
 
-<<<<<<< HEAD
-    const adminDb = getAdminDb();
-    if (!adminDb) {
-      return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: 'Firebase Admin not configured' } },
-        { status: 500 }
-=======
-    const userData = userDoc.data();
-    if (userData.role !== 'ADMIN') {
+    // Verify admin role
+    const adminUserDoc = await adminDb.collection(COLLECTIONS.USERS).doc(decodedToken.uid).get();
+    if (!adminUserDoc.exists || adminUserDoc.data()?.role !== 'ADMIN') {
       return NextResponse.json(
         { success: false, error: { code: 'FORBIDDEN', message: '관리자 권한이 필요합니다.' } },
         { status: 403 }
->>>>>>> origin/main
       );
     }
 
@@ -79,7 +53,6 @@ export async function PATCH(
     // Check if roadmap exists
     const roadmapRef = adminDb.collection(COLLECTIONS.ROADMAPS).doc(id);
     const roadmapDoc = await roadmapRef.get();
-
     if (!roadmapDoc.exists) {
       return NextResponse.json(
         { success: false, error: { code: 'NOT_FOUND', message: '로드맵을 찾을 수 없습니다.' } },
@@ -87,7 +60,7 @@ export async function PATCH(
       );
     }
 
-    const roadmapData = roadmapDoc.data();
+    const roadmapData = roadmapDoc.data() as any;
 
     // Update roadmap status
     const newStatus = action === 'approve' ? 'APPROVED' : 'REJECTED';
@@ -103,32 +76,22 @@ export async function PATCH(
     }
 
     await roadmapRef.update(updateData);
-<<<<<<< HEAD
-=======
 
     // If approving roadmap, update user role if needed
     if (action === 'approve' && roadmapData.userId) {
       try {
         const userRef = adminDb.collection(COLLECTIONS.USERS).doc(roadmapData.userId);
         const userDoc = await userRef.get();
-        
         if (userDoc.exists) {
-          const userData = userDoc.data();
-          
-          // Promote user to AUTH_LOGIN if they're LOGIN_NOT_AUTH
-          if (userData.role === 'LOGIN_NOT_AUTH') {
-            await userRef.update({
-              role: 'AUTH_LOGIN',
-              updatedAt: new Date(),
-            });
+          const updatedUser = userDoc.data() as any;
+          if (updatedUser.role === 'LOGIN_NOT_AUTH') {
+            await userRef.update({ role: 'AUTH_LOGIN', updatedAt: new Date() });
           }
         }
       } catch (error) {
         console.warn('Failed to update user role:', error);
-        // Don't fail the roadmap approval if user update fails
       }
     }
->>>>>>> origin/main
 
     const response: ApiResponse<{ status: string }> = {
       success: true,

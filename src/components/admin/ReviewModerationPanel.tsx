@@ -1,14 +1,8 @@
 'use client';
 
-<<<<<<< HEAD
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/components/auth/AuthProvider';
-import { Review, Course, User, ReviewStatus } from '@/types';
-=======
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { Review, Course, User } from '@/types';
->>>>>>> origin/main
+import { Review, Course, User, ReviewStatus } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -35,17 +29,11 @@ export function ReviewModerationPanel() {
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'PENDING' | 'REJECTED' | 'ALL'>('PENDING');
-  const { firebaseUser } = useAuth();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   useEffect(() => {
-<<<<<<< HEAD
-    if (!firebaseUser) return;
-    fetchReviews();
-  }, [filter, firebaseUser]);
-=======
-    // Reset the flag when user changes or filter changes
+    // Reset the flag when user or filter changes
     hasFetchedData.current = false;
   }, [firebaseUser, filter]);
 
@@ -56,7 +44,6 @@ export function ReviewModerationPanel() {
       fetchReviews();
     }
   }, [firebaseUser, filter]);
->>>>>>> origin/main
 
   const fetchReviews = async () => {
     try {
@@ -77,25 +64,15 @@ export function ReviewModerationPanel() {
       // Cache buster to avoid any intermediary caching
       params.set('_ts', Date.now().toString());
 
-<<<<<<< HEAD
-      let headers: HeadersInit = {};
-      try {
-        const token = await firebaseUser?.getIdToken();
-        if (token) headers = { Authorization: `Bearer ${token}` };
-      } catch {}
-
-      const response = await fetch(`/api/admin/reviews?${params.toString()}` , { headers, cache: 'no-store' });
-=======
       // Get auth token
       const token = await firebaseUser.getIdToken();
 
       const response = await fetch(`/api/admin/reviews?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
+        cache: 'no-store',
       });
-      
->>>>>>> origin/main
       if (!response.ok) {
         throw new Error('리뷰 목록을 불러오는데 실패했습니다.');
       }
@@ -133,17 +110,6 @@ export function ReviewModerationPanel() {
 
       setProcessingId(reviewId);
 
-<<<<<<< HEAD
-      let headers: HeadersInit = { 'Content-Type': 'application/json' };
-      try {
-        const token = await firebaseUser?.getIdToken();
-        if (token) headers = { ...headers, Authorization: `Bearer ${token}` };
-      } catch {}
-
-      const response = await fetch(`/api/admin/reviews/${reviewId}`, {
-        method: 'PATCH',
-        headers,
-=======
       // Get auth token
       const token = await firebaseUser.getIdToken();
 
@@ -151,9 +117,8 @@ export function ReviewModerationPanel() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
->>>>>>> origin/main
         body: JSON.stringify({
           action,
           reason,

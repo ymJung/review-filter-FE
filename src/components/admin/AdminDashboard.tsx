@@ -1,10 +1,6 @@
 'use client';
 
-<<<<<<< HEAD
-import { useState, useEffect } from 'react';
-=======
 import { useState, useEffect, useRef } from 'react';
->>>>>>> origin/main
 import { useAuth } from '@/components/auth/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -31,14 +27,8 @@ export function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { firebaseUser } = useAuth();
 
   useEffect(() => {
-<<<<<<< HEAD
-    // Wait for Firebase user to be ready to include ID token
-    if (!firebaseUser) return;
-    fetchAdminStats();
-=======
     // Reset the flag when user changes
     hasFetchedData.current = false;
   }, [firebaseUser]);
@@ -49,7 +39,6 @@ export function AdminDashboard() {
       hasFetchedData.current = true;
       fetchAdminStats();
     }
->>>>>>> origin/main
   }, [firebaseUser]);
 
   const fetchAdminStats = async () => {
@@ -63,27 +52,14 @@ export function AdminDashboard() {
       setLoading(true);
       setError(null);
 
-<<<<<<< HEAD
-      let headers: HeadersInit = {};
-      try {
-        const token = await firebaseUser?.getIdToken();
-        if (token) {
-          headers = { ...headers, Authorization: `Bearer ${token}` };
-        }
-      } catch {}
-
-      const response = await fetch('/api/admin/stats', { headers });
-=======
       // Get auth token
       const token = await firebaseUser.getIdToken();
 
       const response = await fetch('/api/admin/stats', {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
-      
->>>>>>> origin/main
       if (!response.ok) {
         throw new Error('통계를 불러오는데 실패했습니다.');
       }
