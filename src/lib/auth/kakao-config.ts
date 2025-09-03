@@ -15,7 +15,9 @@ export const validateKakaoDomain = (): boolean => {
     'localhost',
     '127.0.0.1',
     'yh-review-filter.vercel.app',
-    'yh-review-filter.firebaseapp.com'
+    'yh-review-filter.firebaseapp.com',
+    'review-filter-r0gqmnbo9-metalbird0-1877s-projects.vercel.app',
+    'review-filter-fe-metalbird0-1877s-projects.vercel.app'
   ];
   
   return allowedDomains.some(domain => 
