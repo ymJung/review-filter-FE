@@ -53,7 +53,7 @@ export async function PATCH(
     const body = await request.json();
     const { action, reason } = body;
 
-    if (!action || !['block', 'unblock', 'promote', 'demote'].includes(action)) {
+    if (!action || !['block', 'unblock', 'promote', 'demote', 'setRole'].includes(action)) {
       return NextResponse.json(
         { success: false, error: { code: 'INVALID_INPUT', message: '유효하지 않은 액션입니다.' } },
         { status: 400 }
@@ -107,6 +107,25 @@ export async function PATCH(
           newRole = 'LOGIN_NOT_AUTH';
         }
         break;
+      case 'setRole': {
+        const requestedRole = (body?.role as string) || '';
+        const allowed = ['NOT_ACCESS','LOGIN_NOT_AUTH','AUTH_LOGIN','AUTH_PREMIUM','BLOCKED_LOGIN','ADMIN'];
+        if (!allowed.includes(requestedRole)) {
+          return NextResponse.json(
+            { success: false, error: { code: 'INVALID_ROLE', message: '유효하지 않은 권한입니다.' } },
+            { status: 400 }
+          );
+        }
+        // Prevent changing own role
+        if (decodedToken.uid === id) {
+          return NextResponse.json(
+            { success: false, error: { code: 'FORBIDDEN', message: '자신의 권한은 변경할 수 없습니다.' } },
+            { status: 403 }
+          );
+        }
+        newRole = requestedRole;
+        break;
+      }
     }
 
     // Update user

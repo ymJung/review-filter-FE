@@ -27,7 +27,7 @@ export function UserManagementPanel() {
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState<'ALL' | 'BLOCKED_LOGIN' | 'AUTH_LOGIN' | 'AUTH_PREMIUM'>('ALL');
+  const [filter, setFilter] = useState<'ALL' | 'LOGIN_NOT_AUTH' | 'AUTH_LOGIN' | 'AUTH_PREMIUM' | 'BLOCKED_LOGIN' | 'ADMIN'>('ALL');
 
   useEffect(() => {
     // Reset the flag when user or filter/search changes
@@ -140,6 +140,38 @@ export function UserManagementPanel() {
     }
   };
 
+  const handleSetRole = async (userId: string, role: User['role']) => {
+    try {
+      if (!firebaseUser) {
+        throw new Error('인증이 필요합니다.');
+      }
+      setProcessingId(userId);
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: 'setRole', role }),
+      });
+      if (!response.ok) {
+        const t = await response.text();
+        throw new Error(t || '권한 변경에 실패했습니다.');
+      }
+      const data = await response.json();
+      if (data.success) {
+        const newRole = data.data.role as User['role'];
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      }
+    } catch (error: any) {
+      console.error('Error setting role:', error);
+      setError(error.message || '권한 변경에 실패했습니다.');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'ADMIN':
@@ -151,7 +183,7 @@ export function UserManagementPanel() {
       case 'LOGIN_NOT_AUTH':
         return <Badge variant="secondary">미인증</Badge>;
       case 'BLOCKED_LOGIN':
-        return <Badge variant="danger">블록됨</Badge>;
+        return <Badge variant="danger">차단</Badge>;
       default:
         return <Badge variant="outline">{role}</Badge>;
     }
@@ -160,59 +192,23 @@ export function UserManagementPanel() {
   const getRoleActions = (user: UserWithStats) => {
     const actions = [];
 
-    if (user.role === 'BLOCKED_LOGIN') {
-      actions.push(
-        <Button
-          key="unblock"
-          variant="success"
-          size="sm"
-          onClick={() => handleUserAction(user.id, 'unblock')}
-          disabled={processingId === user.id}
-        >
-          차단 해제
-        </Button>
-      );
-    } else if (user.role !== 'ADMIN') {
-      actions.push(
-        <Button
-          key="block"
-          variant="danger"
-          size="sm"
-          onClick={() => handleUserAction(user.id, 'block')}
-          disabled={processingId === user.id}
-        >
-          차단
-        </Button>
-      );
-    }
-
-    if (user.role === 'AUTH_LOGIN' || user.role === 'LOGIN_NOT_AUTH') {
-      actions.push(
-        <Button
-          key="promote"
-          variant="outline"
-          size="sm"
-          onClick={() => handleUserAction(user.id, 'promote')}
-          disabled={processingId === user.id}
-        >
-          프리미엄 승격
-        </Button>
-      );
-    }
-
-    if (user.role === 'AUTH_PREMIUM') {
-      actions.push(
-        <Button
-          key="demote"
-          variant="outline"
-          size="sm"
-          onClick={() => handleUserAction(user.id, 'demote')}
-          disabled={processingId === user.id}
-        >
-          일반 회원으로 변경
-        </Button>
-      );
-    }
+    // 단일 셀렉트로 권한 지정 (버튼 제거)
+    actions.push(
+      <select
+        key="role-select"
+        className="px-2 py-1 border border-gray-300 rounded text-sm"
+        value={user.role}
+        onChange={(e) => handleSetRole(user.id, e.target.value as User['role'])}
+        disabled={processingId === user.id}
+      >
+        <option value="NOT_ACCESS">게스트</option>
+        <option value="LOGIN_NOT_AUTH">미인증</option>
+        <option value="AUTH_LOGIN">인증</option>
+        <option value="AUTH_PREMIUM">프리미엄</option>
+        <option value="BLOCKED_LOGIN">차단</option>
+        <option value="ADMIN">관리자</option>
+      </select>
+    );
 
     return actions;
   };
@@ -241,9 +237,11 @@ export function UserManagementPanel() {
             <div className="flex space-x-2">
               {[
                 { key: 'ALL' as const, label: '전체' },
-                { key: 'AUTH_LOGIN' as const, label: '인증됨' },
+                { key: 'LOGIN_NOT_AUTH' as const, label: '미인증' },
+                { key: 'AUTH_LOGIN' as const, label: '인증' },
                 { key: 'AUTH_PREMIUM' as const, label: '프리미엄' },
-                { key: 'BLOCKED_LOGIN' as const, label: '블록됨' },
+                { key: 'BLOCKED_LOGIN' as const, label: '차단' },
+                { key: 'ADMIN' as const, label: '관리자' },
               ].map((tab) => (
                 <button
                   key={tab.key}
