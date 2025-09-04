@@ -265,27 +265,29 @@ export const signInWithNaver = async (): Promise<{
               clearTimeout(timeout);
               window.removeEventListener('message', handleMessage);
               
-              // Get user profile using the access token
-              fetch('https://openapi.naver.com/v1/nid/me', {
-                headers: {
-                  'Authorization': `Bearer ${event.data.accessToken}`
-                }
+              // Get user profile via server-side proxy to avoid CORS
+              fetch('/api/auth/naver/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accessToken: event.data.accessToken })
               })
-              .then(response => response.json())
-              .then(profileData => {
-                if (profileData.resultcode === '00') {
+                .then(async (response) => {
+                  if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(text || 'NAVER_PROFILE_FETCH_FAILED');
+                  }
+                  return response.json();
+                })
+                .then(({ profile }) => {
                   resolve({
                     accessToken: event.data.accessToken,
-                    profile: profileData.response,
+                    profile,
                     provider: 'naver'
                   });
-                } else {
-                  reject(new AuthError('네이버 프로필 조회에 실패했습니다.', 'NAVER_PROFILE_ERROR'));
-                }
-              })
-              .catch(error => {
-                reject(new AuthError('네이버 프로필 조회 중 오류가 발생했습니다.', 'NAVER_PROFILE_ERROR'));
-              });
+                })
+                .catch(() => {
+                  reject(new AuthError('네이버 프로필 조회 중 오류가 발생했습니다.', 'NAVER_PROFILE_ERROR'));
+                });
               break;
 
             case 'NAVER_LOGIN_ERROR':
