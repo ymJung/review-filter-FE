@@ -37,13 +37,13 @@ export default function Home() {
               </Link>
               {canCreateContent ? (
                 <Link href="/write/review">
-                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600">
+                  <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-blue-600">
                     리뷰 작성하기
                   </Button>
                 </Link>
               ) : (
                 <Link href="/login">
-                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600">
+                  <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-blue-600">
                     로그인하고 시작하기
                   </Button>
                 </Link>

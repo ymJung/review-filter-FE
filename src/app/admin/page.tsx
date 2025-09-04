@@ -44,12 +44,12 @@ export default function AdminPage() {
 
   return (
     <ProtectedRoute requiredRole="ADMIN">
-      <Layout>
+      <Layout className="bg-gray-50 text-gray-900">
         <Container>
           <div className="py-8">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">관리자 페이지</h1>
-              <p className="text-gray-600">플랫폼 관리 및 콘텐츠 검수를 수행할 수 있습니다.</p>
+              <p className="text-gray-700">플랫폼 관리 및 콘텐츠 검수를 수행할 수 있습니다.</p>
             </div>
 
             {/* Tab Navigation */}
