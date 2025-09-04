@@ -377,18 +377,27 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
                   평점 *
                 </label>
                 <div className="flex items-center space-x-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => handleInputChange('rating', star)}
-                      className={`text-2xl ${
-                        star <= formData.rating ? 'text-yellow-400' : 'text-gray-300'
-                      } hover:text-yellow-400 transition-colors`}
-                    >
-                      ⭐
-                    </button>
-                  ))}
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const active = star <= formData.rating;
+                    return (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => handleInputChange('rating', star)}
+                        aria-label={`${star}점 선택`}
+                        className={`transition-colors ${active ? 'text-yellow-400' : 'text-gray-300 hover:text-yellow-300'}`}
+                      >
+                        <svg
+                          className="w-7 h-7"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.976a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.382 2.458a1 1 0 00-.364 1.118l1.286 3.976c.3.922-.755 1.688-1.538 1.118l-3.382-2.458a1 1 0 00-1.176 0L5.241 18.073c-.783.57-1.838-.197-1.538-1.118l1.286-3.976a1 1 0 00-.364-1.118L1.243 9.403c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.976z" />
+                        </svg>
+                      </button>
+                    );
+                  })}
                   <span className="ml-2 text-sm text-gray-600">
                     {formData.rating}점
                   </span>

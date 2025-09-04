@@ -65,17 +65,25 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
 
   const renderStars = (rating: number) => {
     return (
-      <div className="flex items-center">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <span
-            key={star}
-            className={`text-sm ${
-              star <= rating ? 'text-yellow-400' : 'text-gray-300'
-            }`}
-          >
-            ⭐
-          </span>
-        ))}
+      <div className="flex items-center" aria-label={`평점 ${rating}점`}>
+        {[1, 2, 3, 4, 5].map((star) => {
+          const active = star <= rating;
+          return (
+            <span
+              key={star}
+              className={active ? 'text-yellow-400' : 'text-gray-300'}
+              aria-hidden="true"
+            >
+              <svg
+                className="w-5 h-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.976a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.382 2.458a1 1 0 00-.364 1.118l1.286 3.976c.3.922-.755 1.688-1.538 1.118l-3.382-2.458a1 1 0 00-1.176 0L5.241 18.073c-.783.57-1.838-.197-1.538-1.118l1.286-3.976a1 1 0 00-.364-1.118L1.243 9.403c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.976z" />
+              </svg>
+            </span>
+          );
+        })}
         <span className="ml-2 text-sm text-gray-600">({rating}점)</span>
       </div>
     );
