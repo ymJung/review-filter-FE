@@ -41,7 +41,7 @@ export default function MyPage() {
 
   if (loading) {
     return (
-      <Layout>
+      <Layout className="bg-gray-50 text-gray-900">
         <Container className="py-8">
           <div className="flex items-center justify-center min-h-64">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
@@ -53,7 +53,7 @@ export default function MyPage() {
 
   if (!isAuthenticated) {
     return (
-      <Layout>
+      <Layout className="bg-gray-50 text-gray-900">
         <Container className="py-8">
           <Alert variant="warning" title="로그인이 필요합니다">
             <p className="mb-4">마이페이지에 접근하려면 로그인해주세요.</p>
@@ -73,7 +73,7 @@ export default function MyPage() {
   ] as const;
 
   return (
-    <Layout>
+    <Layout className="bg-gray-50 text-gray-900">
       <Container className="py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
