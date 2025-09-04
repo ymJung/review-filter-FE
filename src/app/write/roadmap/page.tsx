@@ -109,7 +109,7 @@ function WriteRoadmapContent() {
   // Check if user is logged in
   if (!user) {
     return (
-      <Layout>
+      <Layout className="bg-gray-50 text-gray-900">
         <Container className="py-8">
           <Alert variant="warning" title="로그인이 필요합니다">
             <p className="mb-4">로드맵을 작성하려면 로그인이 필요합니다.</p>
@@ -125,7 +125,7 @@ function WriteRoadmapContent() {
   // Show loading while fetching roadmap data for edit
   if (isEditMode && loading) {
     return (
-      <Layout>
+      <Layout className="bg-gray-50 text-gray-900">
         <Container className="py-8">
           <Loading />
         </Container>
@@ -134,7 +134,7 @@ function WriteRoadmapContent() {
   }
 
   return (
-    <Layout>
+    <Layout className="bg-gray-50 text-gray-900">
       <Container className="py-8">
         {/* Header */}
         <div className="mb-8">
@@ -181,7 +181,7 @@ function WriteRoadmapContent() {
 export default function WriteRoadmapPage() {
   return (
     <Suspense fallback={
-      <Layout>
+      <Layout className="bg-gray-50 text-gray-900">
         <Container className="py-8">
           <Loading />
         </Container>

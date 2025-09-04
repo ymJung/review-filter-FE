@@ -10,6 +10,7 @@ import { ContentRestriction, AdPlaceholder } from '@/components/auth/ContentRest
 import { RoleGuard, AuthenticatedOnly } from '@/components/auth/RoleGuard';
 import { usePermissions } from '@/hooks/usePermissions';
 import { getReviews } from '@/lib/services/reviewService';
+import { getCourse } from '@/lib/services/courseService';
 import { filterReviewsForUser } from '@/lib/services/accessControlService';
 import { Review, Course, PaginatedResponse } from '@/types';
 import { PLATFORMS, CATEGORIES } from '@/lib/constants';
@@ -166,6 +167,43 @@ export default function ReviewsPage() {
           review.content.toLowerCase().includes(searchLower)
         );
       }
+      
+      // Replace sample data with live reviews from API
+      try {
+        const result = await getReviews({
+          limit: 100,
+          status: 'APPROVED',
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+        });
+        let live = (result?.data || []) as ReviewWithDetails[];
+        // Enrich with course details
+        const courseIds = Array.from(new Set(live.map(r => r.courseId).filter(Boolean)));
+        const pairs = await Promise.all(courseIds.map(async (id) => {
+          const course = await getCourse(id);
+          return course ? [id, course] as const : null;
+        }));
+        const courseMap = new Map<string, Course>();
+        pairs.forEach(p => { if (p) courseMap.set(p[0], p[1]); });
+        let enriched: ReviewWithDetails[] = live.map(r => ({ ...r, course: r.courseId ? courseMap.get(r.courseId) : undefined }));
+        // Apply current filters
+        if (filters.platform) {
+          enriched = enriched.filter(r => r.course?.platform === filters.platform);
+        }
+        if (filters.category) {
+          enriched = enriched.filter(r => r.course?.category === filters.category);
+        }
+        if (filters.rating) {
+          enriched = enriched.filter(r => r.rating >= parseInt(filters.rating));
+        }
+        if (filters.search) {
+          const q = filters.search.toLowerCase();
+          enriched = enriched.filter(r => r.course?.title?.toLowerCase().includes(q) || r.content.toLowerCase().includes(q));
+        }
+        filteredReviews = enriched;
+      } catch (e) {
+        console.warn('실제 리뷰 조회 중 오류, 샘플 데이터로 대체:', e);
+      }
 
       // Apply access control limits
       if (!canViewAllReviews && maxReviewsVisible !== Infinity) {
@@ -209,7 +247,7 @@ export default function ReviewsPage() {
   const hasMoreReviews = !canViewAllReviews && maxReviewsVisible !== Infinity;
 
   return (
-    <Layout>
+    <Layout className="bg-gray-50 text-gray-900">
       <Container className="py-8">
         <div className="flex justify-between items-center mb-8">
           <div>

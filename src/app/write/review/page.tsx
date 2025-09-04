@@ -9,7 +9,7 @@ export default function WriteReviewPage() {
   const { canCreateContent } = useAuth();
 
   return (
-    <Layout>
+    <Layout className="bg-gray-50 text-gray-900">
       <ProtectedRoute requireAuth={true}>
         <Container className="py-8">
           {canCreateContent ? (

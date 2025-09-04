@@ -60,7 +60,7 @@ export default function RoadmapsPage() {
   const hasMoreRoadmaps = roadmaps.length > displayedRoadmaps.length;
 
   return (
-    <Layout>
+    <Layout className="bg-gray-50 text-gray-900">
       <Container className="py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
