@@ -8,7 +8,7 @@
 
 ## 기능
 * 회원가입
-    * 소셜 로그인(카카오/네이버)
+    * 소셜 로그인(구글/카카오/네이버)
     * 랜덤 닉네임 자동 생성 (형용사+명사)
     * 약관 : 최소 개인정보만 수집
 * 리뷰 공개 정책:
@@ -20,13 +20,14 @@
         - 일부 무료 미리보기 제공 (최초 1개만)
     * 전체 열람: 
         - 본인 리뷰 1개 이상 등록 
-        - 프리미엄 결제
+        - 프리미엄 결제(결제 연동 TBD, 광고 비노출 적용)
 * 검수 기준: → 블라인드 처리
     * 욕설/비방
     * 광고성
     * 허위 결제 인증 
 
 ## 데이터 구조
+실제 구현은 Firebase Firestore 컬렉션 기반입니다. 아래 표는 개념 설계이며, 구현 상 컬렉션은 다음과 같습니다: `users`, `courses`, `reviews`, `reviewImages`, `comments`, `roadmaps`, `reviewSummaries`.
 * 강의테이블
 
 |id|강의플랫폼|강의명|강사|카테고리|조회수| 
@@ -69,13 +70,13 @@
 |number|text|number|number|number|text|text|
 |pk||fk|fk|optional||optional|
 
-* 공개상태
+* 공개상태 (구현 코드 기준)
 
-|공개상태|
-|---|
-|검수대기|
-|공개|
-|비공개|
+|코드|설명|
+|---|---|
+|PENDING|검수 대기|
+|APPROVED|공개|
+|REJECTED|거부(소프트 삭제 포함)|
 
 
 * 권한타입
@@ -95,11 +96,16 @@
 |페이지|URL|기능|비고|
 |---|---|---|---|
 |메인|/|메인페이지||
-|강의리뷰|/reviews|리뷰 목록 페이지를 제공한다.||
-|학습 로드맵|/roadmaps|로드맵 목록 페이지 (MVP에서는 리뷰와 동일한 열람 정책 적용)||
-|글쓰기|/write/review|리뷰 작성||
-|로드맵작성|/write/roadmap|/로드맵 작성 페이지 (핵심 CTA)||
-|마이페이지|/mypage|내 활동 관리||
+|로그인|/login|소셜 로그인(구글/카카오/네이버)||
+|네이버 콜백|/auth/naver/callback|네이버 OAuth 콜백 처리(팝업 메시지)|내부용|
+|강의리뷰 목록|/reviews|리뷰 목록 페이지|
+|강의리뷰 상세|/reviews/[id]|리뷰 상세 페이지|
+|학습 로드맵 목록|/roadmaps|로드맵 목록 페이지|
+|학습 로드맵 상세|/roadmaps/[id]|로드맵 상세 페이지|
+|리뷰 작성|/write/review|리뷰 작성|
+|로드맵 작성|/write/roadmap|로드맵 작성(수정은 `?edit=[id]`)|
+|마이페이지|/mypage|내 활동 관리|
+|관리자|/admin|검수/사용자/통계 관리|ADMIN 전용|
 
 ### 페이지별 상세 기능
 * 메인 화면구성
@@ -109,12 +115,13 @@
     - 상단 : 메뉴 네비게이션 
     - 푸터 : 회사소개 / 약관 / 개인정보처리방침 등 
 * 로그인
-    - social 인증 로그인 활용
+    - 소셜 인증 로그인(구글/카카오/네이버)
+    - 네이버: 팝업 + `/auth/naver/callback` 경유, 서버 프록시(`/api/auth/naver/profile`)로 프로필 조회(CORS 회피)
     - 최소한의 정보를 저장 (platform / uuid / nickname)
 * 강의리뷰
     - 권한별로 차등 노출함
     * NOT_ACCESS | LOGIN_NOT_AUTH
-        - 최상위 한개만 노출 
+        - 승인된 리뷰 1개 미리보기 노출(전체 본문은 제한) 
     * AUTH_LOGIN | AUTH_PREMIUM
         - 리뷰 전체 노출
     * BLOCKED_LOGIN
@@ -125,9 +132,9 @@
             1. 강의 정보 입력
             2. 리뷰 내용 작성
             3. 결제 인증 이미지 업로드 필수 
-                - 저장소 - 로컬스토리지 활용. 검수가 끝나면 삭제
-                - 확장자는 - 이미지 - JPEG ,JPG , PNG, GIF, HEIC
-                - 크기는 5메가. 업로드 되면 압축하여 이미지 분석한다.
+                - 저장소: Firebase Storage 업로드(서버 API `/api/upload` 사용)
+                - 형식: 이미지(JPEG, JPG, PNG, GIF, HEIC), 최대 5MB
+                - 서버에서 토큰 URL 발급 및 Firestore에 메타데이터 저장
     * 리뷰 상세 조회
         - 리뷰 상세 조회
         * 댓글 달기
@@ -135,6 +142,7 @@
 * 학습 로드맵
     * 조회
         - 유저/관리자가 작성한 학습 로드맵
+        - 제한 등급일 경우 목록에서 최대 3개 미리보기 노출
     * 로드맵 작성
         * 강의 하나를 들으면 다음 어떤걸 들으면 좋을지 로드맵을 작성
             1. 강의 정보 입력 , 다음 강의 정보를 입력
@@ -170,7 +178,7 @@
         * 최근 리뷰요약
 
 * 로그인
-    * POST /login
+    * POST /api/auth/create-token
 
 * 강의리뷰
     * GET /reviews
@@ -200,11 +208,24 @@
         * 유저 목록 조회
     * POST /admin/users/{user-id}
         * 유저 관리
+    * GET /admin/stats
+        * 관리자 대시보드 통계 조회
+
+* 사용자
+    * GET /users/me/stats, /users/me/reviews, /users/me/roadmaps
+        * 마이페이지용 개인 통계 및 나의 콘텐츠 조회
+
+* 카테고리/요약/업로드/헬스체크 등
+    * GET /categories/stats - 인기 카테고리 집계
+    * POST /summaries/generate - 리뷰 요약 생성(OpenAI)
+    * POST /upload - 인증 이미지 업로드(Firebase Storage)
+    * GET /health, /health/openai, /health/firebase - 시스템/서드파티 헬스 체크
+    * GET /monitoring/health - 모니터링 엔드포인트
+    * GET /cron/* - 요약 만료 정리/데일리 요약(서버 라우트)
 
 ## 외부 서비스 연동
 * Firebase: 인증, 데이터베이스, 스토리지
-* Kakao Developers: 소셜 로그인
-* Naver Developers: 소셜 로그인
+* Google/Kakao/Naver Developers: 소셜 로그인
 * OpenAI: 리뷰 요약 생성
 
 ## 개발 환경 설정
@@ -340,8 +361,8 @@ vercel --prod
 ### 기술 스택
 * **Frontend**: TypeScript, Next.js 14 (App Router)
 * **Database**: Firebase Firestore
-* **Storage**: 로컬스토리지 사용
-* **Authentication**: 소셜 로그인 (Kakao/Naver)
+* **Storage**: Firebase Storage (이미지 업로드/토큰 URL)
+* **Authentication**: 소셜 로그인 (Google/Kakao/Naver)
 * **AI/ML**: OpenAI API (리뷰 요약)
 * **Hosting**: Vercel (또는 Firebase Hosting)
 
