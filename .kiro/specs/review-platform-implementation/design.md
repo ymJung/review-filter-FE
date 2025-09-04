@@ -15,30 +15,39 @@ graph TB
         B[TypeScript]
         C[Tailwind CSS]
     end
-    
+
     subgraph "Authentication"
         D[Firebase Auth]
-        E[Kakao OAuth]
-        F[Naver OAuth]
+        E[Google OAuth]
+        F[Kakao OAuth]
+        G[Naver OAuth]
     end
-    
+
+    subgraph "Server (Next API Routes)"
+        S[/auth/create-token\n/auth/naver/profile\n/reviews, /roadmaps\n/admin/*, /users/*\n/summaries/generate\n/upload, /health*/]
+    end
+
     subgraph "Backend Services"
-        G[Firebase Firestore]
-        H[Firebase Storage]
-        I[OpenAI API]
+        H[Firebase Firestore]
+        I[Firebase Storage]
+        J[OpenAI API]
+        K[Naver Open API]
     end
-    
+
     subgraph "Hosting"
-        J[Vercel]
+        V[Vercel]
     end
-    
+
     A --> D
     D --> E
     D --> F
-    A --> G
-    A --> H
-    A --> I
-    A --> J
+    D --> G
+    A --> S
+    S --> H
+    S --> I
+    S --> J
+    S --> K
+    A --> V
 ```
 
 ### Data Flow Architecture
@@ -47,19 +56,37 @@ graph TB
 sequenceDiagram
     participant U as User
     participant C as Client (Next.js)
-    participant F as Firebase
+    participant S as Server (Next API)
+    participant P as Provider (Google/Kakao/Naver)
+    participant F as Firebase (Auth/Admin/Firestore)
     participant O as OpenAI API
-    
+    participant N as Naver Open API
+
     U->>C: 소셜 로그인 요청
-    C->>F: OAuth 인증
-    F-->>C: 사용자 토큰
-    C->>F: 사용자 정보 저장/조회
-    
+    C->>P: OAuth 인증 (팝업)
+    P-->>C: 액세스 토큰/프로필
+    C->>S: POST /api/auth/create-token (소셜 데이터)
+    S->>F: Firebase Admin 커스텀 토큰 생성
+    F-->>S: Custom Token
+    S-->>C: Custom Token
+    C->>F: signInWithCustomToken
+
+    Note over C,S,N: Naver의 경우 프로필 CORS 회피를 위해\nPOST /api/auth/naver/profile -> Naver Open API
+    C->>S: POST /api/auth/naver/profile
+    S->>N: GET /v1/nid/me (Bearer 토큰)
+    N-->>S: 프로필
+    S-->>C: 프로필
+
     U->>C: 리뷰 작성
-    C->>F: 리뷰 데이터 저장
-    C->>O: 리뷰 요약 생성 요청
-    O-->>C: 요약 텍스트
-    C->>F: 요약 캐시 저장
+    C->>S: POST /api/reviews
+    S->>F: Firestore에 저장
+
+    U->>C: 요약 보기
+    C->>S: POST /api/summaries/generate
+    S->>O: OpenAI 호출
+    O-->>S: 요약 결과
+    S->>F: 요약 캐시 저장
+    S-->>C: 요약 반환
 ```
 
 ## Components and Interfaces
@@ -100,7 +127,7 @@ src/
 ### Core Components
 
 #### 1. Authentication Components
-- `SocialLoginButton`: 카카오/네이버 로그인 버튼
+- `SocialLoginButton`: 구글/카카오/네이버 로그인 버튼 (네이버는 팝업 + 콜백)
 - `AuthProvider`: 인증 상태 관리 컨텍스트
 - `ProtectedRoute`: 권한 기반 라우트 보호
 
@@ -121,35 +148,48 @@ src/
 - `ReviewModerationPanel`: 리뷰 검수 패널
 - `UserManagementPanel`: 사용자 관리 패널
 
-### API Routes Structure
+### API Routes Structure (실제 구현 기준)
 
 ```
 src/app/api/
 ├── auth/
-│   └── callback/
+│   ├── create-token/route.ts         # 소셜→Firebase 커스텀 토큰 발급
+│   └── naver/profile/route.ts        # 네이버 프로필 서버 프록시(CORS 회피)
 ├── reviews/
-│   ├── route.ts
-│   └── [id]/
+│   ├── route.ts                      # 목록/생성
+│   └── [id]/route.ts                 # 상세/수정/삭제
 ├── roadmaps/
 │   ├── route.ts
-│   └── [id]/
+│   └── [id]/route.ts
 ├── admin/
-│   ├── reviews/
-│   ├── roadmaps/
-│   └── users/
-├── upload/
-└── summary/
+│   ├── reviews/[id]/route.ts
+│   ├── roadmaps/[id]/route.ts
+│   ├── users/[id]/route.ts
+│   └── stats/route.ts
+├── users/
+│   ├── me/stats/route.ts
+│   ├── me/reviews/route.ts
+│   └── me/roadmaps/route.ts
+├── categories/stats/route.ts
+├── summaries/
+│   └── generate/route.ts
+├── upload/route.ts                   # 인증 이미지 업로드(Firebase Storage)
+├── health/{route.ts, firebase/…, openai/…}
+├── monitoring/health/route.ts
+├── cron/{cleanup-expired-summaries, generate-daily-summaries}/route.ts
+├── robots/route.ts
+└── sitemap/route.ts
 ```
 
 ## Data Models
 
-### Firebase Firestore Collections
+### Firebase Firestore Collections (구현 스키마)
 
 #### Users Collection
 ```typescript
 interface User {
   id: string;
-  socialProvider: 'kakao' | 'naver';
+  socialProvider: 'google' | 'kakao' | 'naver';
   socialId: string;
   nickname: string;
   role: 'NOT_ACCESS' | 'LOGIN_NOT_AUTH' | 'AUTH_LOGIN' | 'AUTH_PREMIUM' | 'BLOCKED_LOGIN' | 'ADMIN';
@@ -209,6 +249,7 @@ interface Comment {
   content: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 ```
 
@@ -218,10 +259,13 @@ interface Roadmap {
   id: string;
   title: string;
   description: string;
-  authorId: string;
-  courseId: string;
-  nextCourseId?: string;
+  courseTitle: string;
+  coursePlatform: string;
+  nextCourses?: Array<{ title: string; platform: string }>; // optional list
+  category?: string;
+  userId: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  viewCount: number;
   createdAt: Timestamp;
 }
 ```
@@ -237,7 +281,7 @@ interface ReviewSummary {
 }
 ```
 
-### Firebase Security Rules
+### Firebase Security Rules (개념 예시)
 
 ```javascript
 rules_version = '2';
@@ -249,7 +293,7 @@ service cloud.firestore {
       allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
     }
     
-    // Reviews - public read with role-based filtering
+    // Reviews - APPROVED 공개, 서버(Admin) 경유 업데이트 허용
     match /reviews/{reviewId} {
       allow read: if resource.data.status == 'APPROVED';
       allow create: if request.auth != null;
@@ -258,7 +302,7 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN');
     }
     
-    // Admin only access
+    // Admin only access (서버에서 Admin 검증 수행)
     match /admin/{document=**} {
       allow read, write: if request.auth != null && 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
