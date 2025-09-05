@@ -4,16 +4,31 @@ import { Course, ApiResponse, PaginatedResponse } from '@/types';
 import { handleError } from '@/lib/utils';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 
+// Ensure Node.js runtime for firebase-admin compatibility
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // GET /api/courses - Get courses with pagination and filtering
 export async function GET(request: NextRequest) {
   try {
     // Check if Firebase Admin is properly configured
     const adminDb = getAdminDb();
     if (!adminDb) {
-      return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
-        { status: 500 }
-      );
+      // Graceful fallback: return empty list to avoid client errors in dev without Admin SDK
+      const empty: ApiResponse<PaginatedResponse<Course>> = {
+        success: true,
+        data: {
+          data: [],
+          pagination: {
+            currentPage: 1,
+            totalPages: 0,
+            totalItems: 0,
+            hasNext: false,
+            hasPrev: false,
+          },
+        },
+      };
+      return NextResponse.json(empty, { status: 200 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -25,46 +40,61 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
-    // Build query using Firebase Admin SDK
-    let coursesQuery: any = adminDb.collection(COLLECTIONS.COURSES);
+    let courses: Course[] = [];
+    let totalItems = 0;
+    let totalPages = 0;
 
-    // Add filters
-    if (platform) {
-      coursesQuery = coursesQuery.where('platform', '==', platform);
+    try {
+      // Build query using Firebase Admin SDK
+      let coursesQuery: any = adminDb.collection(COLLECTIONS.COURSES);
+
+      // Add filters
+      if (platform) {
+        coursesQuery = coursesQuery.where('platform', '==', platform);
+      }
+      
+      if (category) {
+        coursesQuery = coursesQuery.where('category', '==', category);
+      }
+
+      // Add search (simple title search)
+      if (search) {
+        // Note: Firestore doesn't support full-text search natively
+        // This is a simple prefix search
+        coursesQuery = coursesQuery
+          .where('title', '>=', search)
+          .where('title', '<=', search + '\uf8ff');
+      }
+
+      // Add sorting
+      coursesQuery = coursesQuery.orderBy(sortBy, sortOrder as any);
+
+      // Add pagination
+      const offset = (page - 1) * pageSize;
+      coursesQuery = coursesQuery.offset(offset).limit(pageSize);
+
+      const snapshot = await coursesQuery.get();
+      courses = snapshot.docs.map((doc: any) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Be robust to different createdAt shapes (Timestamp | Date | string)
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt) || new Date(),
+        } as Course;
+      });
+
+      // Get total count (simplified - in production, use a separate count collection)
+      const totalQuery: any = adminDb.collection(COLLECTIONS.COURSES);
+      const totalSnapshot = await totalQuery.get();
+      totalItems = totalSnapshot.size;
+      totalPages = Math.ceil(totalItems / pageSize);
+    } catch (e: any) {
+      console.warn('Admin SDK query failed in /api/courses, returning empty set:', e?.message || e);
+      courses = [];
+      totalItems = 0;
+      totalPages = 0;
     }
-    
-    if (category) {
-      coursesQuery = coursesQuery.where('category', '==', category);
-    }
-
-    // Add search (simple title search)
-    if (search) {
-      // Note: Firestore doesn't support full-text search natively
-      // This is a simple prefix search
-      coursesQuery = coursesQuery
-        .where('title', '>=', search)
-        .where('title', '<=', search + '\uf8ff');
-    }
-
-    // Add sorting
-    coursesQuery = coursesQuery.orderBy(sortBy, sortOrder as any);
-
-    // Add pagination
-    const offset = (page - 1) * pageSize;
-    coursesQuery = coursesQuery.offset(offset).limit(pageSize);
-
-    const snapshot = await coursesQuery.get();
-    const courses: Course[] = snapshot.docs.map((doc: any) => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-    }));
-
-    // Get total count (simplified - in production, use a separate count collection)
-    const totalQuery: any = adminDb.collection(COLLECTIONS.COURSES);
-    const totalSnapshot = await totalQuery.get();
-    const totalItems = totalSnapshot.size;
-    const totalPages = Math.ceil(totalItems / pageSize);
 
     const response: ApiResponse<PaginatedResponse<Course>> = {
       success: true,

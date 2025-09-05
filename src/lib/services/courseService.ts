@@ -54,13 +54,23 @@ export const getCourse = async (id: string): Promise<Course | null> => {
       if (response.status === 404) {
         return null;
       }
-      throw new Error('Failed to fetch course');
+      // Gracefully degrade on server errors (avoid noisy console errors per review)
+      try {
+        const maybeJson = await response.json().catch(() => null);
+        if (maybeJson && maybeJson.error) {
+          console.warn(`[getCourse] ${response.status} ${response.statusText}: ${maybeJson.error.code} - ${maybeJson.error.message}`);
+        } else {
+          console.warn(`[getCourse] ${response.status} ${response.statusText} for id ${id}`);
+        }
+      } catch {}
+      return null;
     }
 
     const result: ApiResponse<Course> = await response.json();
     return result.success ? result.data! : null;
   } catch (error) {
-    console.error('Error fetching course:', error);
+    // Network or unexpected error – log once at warn level to reduce noise
+    console.warn('Error fetching course:', error);
     return null;
   }
 };
