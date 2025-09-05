@@ -112,7 +112,7 @@ export const Footer: React.FC = () => {
             </p>
             <div className="mt-4 md:mt-0 flex space-x-6">
               <span className="text-gray-500 text-sm">
-                Made with ❤️ for learners
+                열심히 공부하는 여러분을 응원합니다.
               </span>
             </div>
           </div>
