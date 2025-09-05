@@ -233,14 +233,24 @@ export const signInWithNaver = async (): Promise<{
         reject(new AuthError('네이버 로그인 시간이 초과되었습니다.', 'NAVER_TIMEOUT'));
       }, 30000);
 
+      // Generate and store state for CSRF protection
+      const state = Math.random().toString(36).substring(2, 15);
+      try {
+        sessionStorage.setItem('naver_oauth_state', state);
+      } catch (_) {
+        // ignore storage errors (private mode, etc.)
+      }
+
       // Create popup window for Naver login
       const popupWidth = 480;
       const popupHeight = 640;
       const left = (window.screen.width - popupWidth) / 2;
       const top = (window.screen.height - popupHeight) / 2;
+      const parentOrigin = window.location.origin;
+      const redirectUri = `${parentOrigin}/auth/naver/callback`;
       
       const popup = window.open(
-        `https://nid.naver.com/oauth2.0/authorize?response_type=token&client_id=${process.env.NEXT_PUBLIC_NAVER_CLIENT_ID}&redirect_uri=${encodeURIComponent(`${window.location.origin}/auth/naver/callback`)}&state=${Math.random().toString(36).substring(2, 15)}`,
+        `https://nid.naver.com/oauth2.0/authorize?response_type=token&client_id=${process.env.NEXT_PUBLIC_NAVER_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`,
         'naver_login',
         `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=yes,scrollbars=yes,status=yes`
       );
@@ -251,12 +261,38 @@ export const signInWithNaver = async (): Promise<{
         return;
       }
 
+      // Trusted origin helper (allow minor domain variants and allowlist)
+      const isTrustedOrigin = (origin: string) => {
+        try {
+          if (!origin) return false;
+          const current = new URL(window.location.origin);
+          const incoming = new URL(origin);
+          // Normalize host by stripping leading www.
+          const norm = (h: string) => h.replace(/^www\./, '');
+          if (norm(current.host) === norm(incoming.host) && current.protocol === incoming.protocol) {
+            return true;
+          }
+
+          const allowlist = (process.env.NEXT_PUBLIC_AUTH_ALLOWED_ORIGINS || '')
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean);
+          if (allowlist.includes(origin)) return true;
+          const alt1 = `${current.protocol}//www.${norm(current.host)}`;
+          const alt2 = `${current.protocol}//${norm(current.host)}`;
+          return origin === alt1 || origin === alt2;
+        } catch (_) {
+          return false;
+        }
+      };
+
+      // Track popup close checker to avoid race on success
+      let popupCloseChecker: number | null = null;
+
       // Listen for messages from the popup
       const handleMessage = (event: MessageEvent) => {
-        // Check if the message is from our domain
-        if (event.origin !== window.location.origin) {
-          return;
-        }
+        // Check if the message is from a trusted domain
+        if (!isTrustedOrigin(event.origin)) return;
 
         // Check if this is our Naver login message
         if (event.data && event.data.type) {
@@ -264,7 +300,25 @@ export const signInWithNaver = async (): Promise<{
             case 'NAVER_LOGIN_SUCCESS':
               clearTimeout(timeout);
               window.removeEventListener('message', handleMessage);
-              
+              if (popupCloseChecker !== null) {
+                clearInterval(popupCloseChecker);
+                popupCloseChecker = null;
+              }
+
+              // Validate state (best-effort)
+              try {
+                const saved = sessionStorage.getItem('naver_oauth_state');
+                if (saved && event.data?.state && saved !== event.data.state) {
+                  reject(new AuthError('상태 값이 일치하지 않습니다.', 'NAVER_STATE_MISMATCH'));
+                  return;
+                }
+                if (!event.data?.state) {
+                  console.warn('[NAVER] state not returned by callback; proceeding without strict validation');
+                }
+              } catch (_) {
+                // If we cannot read storage, proceed but it's less safe
+              }
+
               // Get user profile via server-side proxy to avoid CORS
               fetch('/api/auth/naver/profile', {
                 method: 'POST',
@@ -279,6 +333,7 @@ export const signInWithNaver = async (): Promise<{
                   return response.json();
                 })
                 .then(({ profile }) => {
+                  try { sessionStorage.removeItem('naver_oauth_state'); } catch (_) {}
                   resolve({
                     accessToken: event.data.accessToken,
                     profile,
@@ -293,6 +348,10 @@ export const signInWithNaver = async (): Promise<{
             case 'NAVER_LOGIN_ERROR':
               clearTimeout(timeout);
               window.removeEventListener('message', handleMessage);
+              if (popupCloseChecker !== null) {
+                clearInterval(popupCloseChecker);
+                popupCloseChecker = null;
+              }
               reject(new AuthError('네이버 로그인에 실패했습니다.', 'NAVER_AUTH_ERROR'));
               break;
           }
@@ -302,14 +361,21 @@ export const signInWithNaver = async (): Promise<{
       window.addEventListener('message', handleMessage);
 
       // Check if popup is closed
-      const checkPopup = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(checkPopup);
-          clearTimeout(timeout);
-          window.removeEventListener('message', handleMessage);
-          reject(new AuthError('로그인 창이 닫혔습니다.', 'NAVER_POPUP_CLOSED'));
+      popupCloseChecker = window.setInterval(() => {
+        try {
+          if (popup.closed) {
+            if (popupCloseChecker !== null) {
+              clearInterval(popupCloseChecker);
+              popupCloseChecker = null;
+            }
+            clearTimeout(timeout);
+            window.removeEventListener('message', handleMessage);
+            reject(new AuthError('로그인 창이 닫혔습니다.', 'NAVER_POPUP_CLOSED'));
+          }
+        } catch (_) {
+          // Accessing popup.closed may throw in some browsers during navigation; ignore
         }
-      }, 1000);
+      }, 500);
     });
   } catch (error) {
     throw new AuthError('네이버 SDK 초기화에 실패했습니다.', 'NAVER_SDK_ERROR');

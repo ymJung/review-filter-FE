@@ -9,11 +9,17 @@ export default function NaverCallbackPage() {
 
   useEffect(() => {
     // Extract token from URL hash
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const accessToken = params.get('access_token');
-    const tokenType = params.get('token_type');
-    const expiresIn = params.get('expires_in');
+    const hash = window.location.hash.startsWith('#')
+      ? window.location.hash.substring(1)
+      : window.location.hash;
+    const hashParams = new URLSearchParams(hash);
+    const qsParams = new URLSearchParams(window.location.search);
+    const accessToken = hashParams.get('access_token');
+    const tokenType = hashParams.get('token_type');
+    const expiresIn = hashParams.get('expires_in');
+    // Some providers may return state in query instead of fragment
+    const state = hashParams.get('state') || qsParams.get('state') || undefined;
+    // We will postMessage with target '*' and let the opener validate origin
     
     if (accessToken) {
       // Store the token in localStorage or sessionStorage
@@ -25,11 +31,12 @@ export default function NaverCallbackPage() {
           type: 'NAVER_LOGIN_SUCCESS',
           accessToken,
           tokenType,
-          expiresIn
-        }, window.location.origin);
+          expiresIn,
+          state,
+        }, '*');
         
         // Close the popup
-        window.close();
+        setTimeout(() => window.close(), 0);
       } else {
         // Redirect to home page or dashboard
         router.push('/');
@@ -46,11 +53,12 @@ export default function NaverCallbackPage() {
         window.opener.postMessage({
           type: 'NAVER_LOGIN_ERROR',
           error,
-          errorDescription
-        }, window.location.origin);
+          errorDescription,
+          state,
+        }, '*');
         
         // Close the popup
-        window.close();
+        setTimeout(() => window.close(), 0);
       } else {
         // Redirect to login page with error
         router.push('/login?error=naver_login_failed');
