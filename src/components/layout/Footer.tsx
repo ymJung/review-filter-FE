@@ -23,7 +23,7 @@ export const Footer: React.FC = () => {
             </p>
             <div className="flex space-x-4">
               <a
-                href="mailto:contact@reviewfilter.com"
+                href="mailto:theslowbiz@gmail.com"
                 className="text-gray-400 hover:text-gray-500 transition-colors"
               >
                 <span className="sr-only">이메일</span>
@@ -32,7 +32,7 @@ export const Footer: React.FC = () => {
                 </svg>
               </a>
               <a
-                href="https://github.com/reviewfilter"
+                href="https://github.com/ymJung/review-filter-FE"
                 className="text-gray-400 hover:text-gray-500 transition-colors"
                 target="_blank"
                 rel="noopener noreferrer"
