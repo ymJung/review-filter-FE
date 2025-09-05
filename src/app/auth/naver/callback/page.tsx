@@ -43,8 +43,8 @@ export default function NaverCallbackPage() {
       }
     } else {
       // Handle error case
-      const error = params.get('error');
-      const errorDescription = params.get('error_description');
+      const error = hashParams.get('error') || qsParams.get('error');
+      const errorDescription = hashParams.get('error_description') || qsParams.get('error_description');
       
       console.error('Naver login error:', error, errorDescription);
       
