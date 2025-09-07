@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
-import { promoteToAuthenticated } from '@/lib/auth/user';
 import { Review, ApiResponse, PaginatedResponse, Course } from '@/types';
 import { handleError } from '@/lib/utils';
 import { COLLECTIONS } from '@/lib/firebase/collections';
@@ -135,12 +134,30 @@ async function createOrGetCourseAdmin(adminDb: any, courseData: {
       .get();
     
     if (!existingSnapshot.empty) {
-      // Course exists, return it
+      // Course exists; update missing/changed metadata (category/instructor) if provided
       const existingDoc = existingSnapshot.docs[0];
+      const existingData = existingDoc.data() as any;
+
+      const updates: Record<string, any> = {};
+      const incomingCategory = courseData.category?.trim();
+      const incomingInstructor = courseData.instructor?.trim();
+
+      if (incomingCategory && incomingCategory !== existingData.category) {
+        updates.category = incomingCategory;
+      }
+      if (incomingInstructor && incomingInstructor !== existingData.instructor) {
+        updates.instructor = incomingInstructor;
+      }
+      if (Object.keys(updates).length > 0) {
+        updates.updatedAt = new Date();
+        try { await existingDoc.ref.update(updates); } catch {}
+      }
+
       const existingCourse: Course = {
         id: existingDoc.id,
-        ...existingDoc.data(),
-        createdAt: existingDoc.data().createdAt?.toDate() || new Date(),
+        ...existingData,
+        ...updates,
+        createdAt: existingData.createdAt?.toDate?.() || new Date(existingData.createdAt) || new Date(),
       };
       return existingCourse;
     }
@@ -252,12 +269,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Create review
+    const autoApprove = process.env.AUTO_APPROVE_REVIEWS === 'true' || process.env.NODE_ENV !== 'production';
     const reviewData: Omit<Review, 'id'> = {
       courseId: course.id,
       userId: decodedToken.uid,
       content: content.trim(),
       rating: parseInt(rating),
-      status: 'PENDING',
+      status: autoApprove ? 'APPROVED' : 'PENDING',
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -290,7 +308,19 @@ export async function POST(request: NextRequest) {
     const userReviewsSnapshot = await adminDb.collection('reviews').where('userId', '==', decodedToken.uid).get();
     
     if (userReviewsSnapshot.size === 1) { // This is their first review
-      await promoteToAuthenticated(decodedToken.uid);
+      // Promote user role using Admin SDK to avoid client-side rules in server code
+      try {
+        const userRef = adminDb.collection(COLLECTIONS.USERS).doc(decodedToken.uid);
+        const userDoc = await userRef.get();
+        if (userDoc.exists) {
+          const userData = userDoc.data() as any;
+          if (userData.role === 'LOGIN_NOT_AUTH') {
+            await userRef.update({ role: 'AUTH_LOGIN', updatedAt: new Date() });
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to promote user to AUTH_LOGIN after first review:', e);
+      }
     }
 
     const newReview: Review = {

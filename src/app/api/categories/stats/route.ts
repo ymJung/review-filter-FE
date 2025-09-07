@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 
 // Cache for category stats (in production, use Redis or similar)
 const statsCache = new Map<string, { data: CategoryStats[], timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+// Shorter cache in development to avoid stale/dummy-looking data
+const CACHE_DURATION = process.env.NODE_ENV === 'production' ? 5 * 60 * 1000 : 0;
 
 // GET /api/categories/stats - Get category statistics
 export async function GET(request: NextRequest) {
@@ -44,9 +45,19 @@ export async function GET(request: NextRequest) {
       // Get category stats from recent reviews with simplified approach
       const reviewsQuery = adminDb.collection('reviews')
         .where('status', '==', 'APPROVED')
-        .limit(100); // Get recent 100 reviews
+        .orderBy('createdAt', 'desc')
+        .limit(100); // Get most recent 100 approved reviews
 
-      const reviewsSnapshot = await reviewsQuery.get();
+      let reviewsSnapshot: any;
+      try {
+        reviewsSnapshot = await reviewsQuery.get();
+      } catch (e) {
+        // Fallback without orderBy if index is missing
+        const fallbackQuery = adminDb.collection('reviews')
+          .where('status', '==', 'APPROVED')
+          .limit(100);
+        reviewsSnapshot = await fallbackQuery.get();
+      }
       const categoryCount: Record<string, number> = {};
       let totalReviews = 0;
 

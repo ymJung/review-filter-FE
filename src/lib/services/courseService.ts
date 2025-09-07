@@ -143,11 +143,15 @@ export const getCategoryStats = async (params: {
     if (params.limit) searchParams.set('limit', params.limit.toString());
     if (params.source) searchParams.set('source', params.source);
 
+    // cache-buster to avoid browser/proxy cache in dev
+    searchParams.set('_ts', Date.now().toString());
+
     const response = await fetch(`/api/categories/stats?${searchParams.toString()}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
+      cache: 'no-store',
     });
 
     if (!response.ok) {

@@ -148,15 +148,30 @@ export async function POST(request: NextRequest) {
       .get();
     
     if (!existingSnapshot.empty) {
-      // Course exists, return it
+      // Course exists; optionally update category/instructor when provided and different
       const existingDoc = existingSnapshot.docs[0];
       const data = existingDoc.data() as any;
+
+      const updates: Record<string, any> = {};
+      const incomingCategory = category?.trim();
+      const incomingInstructor = instructor?.trim();
+      if (incomingCategory && incomingCategory !== data.category) {
+        updates.category = incomingCategory;
+      }
+      if (incomingInstructor && incomingInstructor !== data.instructor) {
+        updates.instructor = incomingInstructor;
+      }
+      if (Object.keys(updates).length > 0) {
+        updates.updatedAt = new Date();
+        try { await existingDoc.ref.update(updates); } catch {}
+      }
+
       const existingCourse: Course = {
         id: existingDoc.id,
         platform: data.platform,
         title: data.title,
-        instructor: data.instructor,
-        category: data.category,
+        instructor: updates.instructor ?? data.instructor,
+        category: updates.category ?? data.category,
         viewCount: data.viewCount ?? 0,
         createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
       };

@@ -118,7 +118,7 @@ export const CategoryStatsComponent: React.FC<CategoryStatsProps> = ({
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex items-center justify-between text-gray-900">
           {title}
           <Badge variant="outline" size="sm">
             {source === 'reviews' ? '리뷰 기준' : '강의 기준'}
