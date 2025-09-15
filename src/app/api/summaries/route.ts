@@ -29,16 +29,29 @@ export async function GET(request: NextRequest) {
       .limit(limit * 2); // Get more to filter out expired ones
 
     const querySnapshot = await query.get();
-    
+
+    // Helper to normalize Firestore Timestamp | Date | number to Date
+    const toDate = (val: any): Date => {
+      if (!val) return new Date(0);
+      if (val instanceof Date) return val;
+      if (typeof val?.toDate === 'function') return val.toDate();
+      if (typeof val?.seconds === 'number') return new Date(val.seconds * 1000);
+      const parsed = new Date(val);
+      return isNaN(parsed.getTime()) ? new Date(0) : parsed;
+    };
+
     // Filter out expired summaries in memory
     const now = new Date();
     const validSummaries = querySnapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        expiresAt: doc.data().expiresAt?.toDate() || new Date(),
-      }))
+      .map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: toDate(data.createdAt),
+          expiresAt: toDate(data.expiresAt),
+        };
+      })
       .filter(summary => summary.expiresAt > now)
       .slice(0, limit);
     const summaries: ReviewSummary[] = validSummaries as ReviewSummary[];

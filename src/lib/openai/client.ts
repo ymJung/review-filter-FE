@@ -32,6 +32,29 @@ export interface ReviewSummaryResponse {
 }
 
 export class OpenAIService {
+  private static tryParseJson(text: string): any | null {
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch {}
+    // Strip code fences if present
+    const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenced) {
+      try {
+        return JSON.parse(fenced[1]);
+      } catch {}
+    }
+    // Try substring between first { and last }
+    const first = text.indexOf('{');
+    const last = text.lastIndexOf('}');
+    if (first !== -1 && last !== -1 && last > first) {
+      const candidate = text.slice(first, last + 1);
+      try {
+        return JSON.parse(candidate);
+      } catch {}
+    }
+    return null;
+  }
   /**
    * Generate a comprehensive summary of multiple reviews
    */
@@ -98,16 +121,14 @@ ${reviewsText}
         max_tokens: 1000,
       });
 
-      const responseText = completion.choices[0]?.message?.content;
+      const responseText = completion.choices[0]?.message?.content || '';
       if (!responseText) {
         throw new Error('No response from OpenAI');
       }
 
-      // Parse JSON response
-      let parsedResponse;
-      try {
-        parsedResponse = JSON.parse(responseText);
-      } catch (error) {
+      // Parse JSON response robustly
+      const parsedResponse = this.tryParseJson(responseText);
+      if (!parsedResponse) {
         console.error('Failed to parse OpenAI response:', responseText);
         throw new Error('Invalid response format from OpenAI');
       }

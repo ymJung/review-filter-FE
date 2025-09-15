@@ -1,52 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
-  getDocs, 
-  addDoc,
-  serverTimestamp,
-  limit as firestoreLimit 
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getAdminDb } from '@/lib/firebase/admin';
 import { OpenAIService, ReviewSummaryRequest } from '@/lib/openai/client';
 import { Review, ReviewSummary, ApiResponse } from '@/types';
 import { handleError } from '@/lib/utils';
+import { CACHE_DURATION } from '@/lib/constants';
+
+// Force dynamic to avoid caching issues
+export const dynamic = 'force-dynamic';
 
 // POST /api/summaries/generate - Generate review summary using OpenAI
 export async function POST(request: NextRequest) {
   try {
-    // Check if Firestore is initialized
-    if (!db) {
+    // Use Firebase Admin for server-side privileged access
+    const adminDb = getAdminDb();
+    if (!adminDb) {
       return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: '데이터베이스 연결이 초기화되지 않았습니다.' } },
+        { success: false, error: { code: 'SERVER_ERROR', message: '서버 데이터베이스(Admin) 초기화에 실패했습니다.' } },
         { status: 500 }
       );
     }
 
     const { category, platform, limit = 10 } = await request.json();
 
-    // Build query for approved reviews
-    const reviewsRef = collection(db, 'reviews');
-    let q = query(
-      reviewsRef,
-      where('status', '==', 'APPROVED'),
-      orderBy('createdAt', 'desc'),
-      firestoreLimit(limit)
-    );
+    // Build query for approved reviews (Admin SDK)
+    const reviewsQuery = adminDb
+      .collection('reviews')
+      .where('status', '==', 'APPROVED')
+      .orderBy('createdAt', 'desc')
+      .limit(Math.max(1, Math.min(50, Number(limit) || 10)));
 
-    // Add category filter if provided
-    if (category) {
-      // Note: This would require a category field in reviews or joining with courses
-      // For now, we'll fetch all approved reviews and filter later
-    }
-
-    const querySnapshot = await getDocs(q);
-    const reviews = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Review[];
+    // Note: category/platform filtering requires fields on review docs or a join with courses.
+    const querySnapshot = await reviewsQuery.get();
+    const reviews = querySnapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })) as Review[];
 
     if (reviews.length === 0) {
       return NextResponse.json(
@@ -74,42 +59,37 @@ export async function POST(request: NextRequest) {
     });
 
     // Create summary text
-    const summaryText = `
-📊 **전체 요약**
-${summaryData.summary}
-
-⭐ **평균 평점**: ${summaryData.averageRating}/5 (총 ${summaryData.totalReviews}개 리뷰)
-
-🎯 **핵심 포인트**
-${summaryData.keyPoints.map(point => `• ${point}`).join('\n')}
-
-��� **추천 대상**
-${summaryData.recommendedFor.map(target => `• ${target}`).join('\n')}
-
-✅ **공통 장점**
-${summaryData.commonPositives.map(positive => `• ${positive}`).join('\n')}
-
-⚠️ **공통 단점**
-${summaryData.commonNegatives.map(negative => `• ${negative}`).join('\n')}
-    `.trim();
+    const sections: string[] = [];
+    sections.push(`📊 전체 요약\n${summaryData.summary}`);
+    sections.push(`⭐ 평균 평점: ${summaryData.averageRating}/5 (총 ${summaryData.totalReviews}개 리뷰)`);
+    if (summaryData.keyPoints?.length) {
+      sections.push(`🎯 핵심 포인트\n${summaryData.keyPoints.map((p) => `• ${p}`).join('\n')}`);
+    }
+    if (summaryData.recommendedFor?.length) {
+      sections.push(`👥 추천 대상\n${summaryData.recommendedFor.map((t) => `• ${t}`).join('\n')}`);
+    }
+    if (summaryData.commonPositives?.length) {
+      sections.push(`✅ 공통 장점\n${summaryData.commonPositives.map((p) => `• ${p}`).join('\n')}`);
+    }
+    if (summaryData.commonNegatives?.length) {
+      sections.push(`⚠️ 공통 단점\n${summaryData.commonNegatives.map((n) => `• ${n}`).join('\n')}`);
+    }
+    const summaryText = sections.join('\n\n');
 
     // Save summary to cache
     const reviewIds = reviews.map(review => review.id);
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 24); // Cache for 24 hours
+    const createdAt = new Date();
+    const expiresAt = new Date(createdAt.getTime() + (CACHE_DURATION?.REVIEW_SUMMARY || 24 * 60 * 60 * 1000));
 
     const summaryDoc: Omit<ReviewSummary, 'id'> = {
       summary: summaryText,
       reviewIds,
-      createdAt: new Date(),
+      createdAt,
       expiresAt,
     };
 
-    const summariesRef = collection(db, 'reviewSummaries');
-    const docRef = await addDoc(summariesRef, {
+    const docRef = await adminDb.collection('reviewSummaries').add({
       ...summaryDoc,
-      createdAt: serverTimestamp(),
-      expiresAt: serverTimestamp(), // Will be updated with actual expiry
     });
 
     const newSummary: ReviewSummary = {
