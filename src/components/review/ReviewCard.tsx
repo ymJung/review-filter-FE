@@ -26,6 +26,8 @@ interface ReviewCardProps {
   onEdit?: (review: Review) => void;
   onDelete?: (review: Review) => void;
   className?: string;
+  // When true, hide content and show blurred overlay CTA
+  blurred?: boolean;
 }
 
 export const ReviewCard: React.FC<ReviewCardProps> = ({
@@ -36,8 +38,9 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
   onEdit,
   onDelete,
   className = '',
+  blurred = false,
 }) => {
-  const { user, canModerate } = usePermissions();
+  const { user, canModerate, canCreateReviews } = usePermissions();
   
   const isOwner = user?.id === review.userId;
   const canEdit = isOwner || canModerate;
@@ -134,24 +137,55 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
       <CardContent className="flex-1 flex flex-col">
         {/* Review Content */}
         <div className={`space-y-3 mb-4 ${compact ? 'space-y-2' : ''}`}>
-          <div>
-            <p className="text-gray-700 leading-relaxed">
-              {showFullContent 
-                ? review.content 
-                : truncateText(review.content, compact ? 100 : 150)
-              }
-            </p>
-            {!showFullContent && review.content.length > (compact ? 100 : 150) && (
-              <Link href={`/reviews/${review.id}`}>
-                <Button variant="ghost" size="sm" className="mt-2 p-0 h-auto">
-                  더 보기 →
-                </Button>
-              </Link>
-            )}
-          </div>
+          {blurred ? (
+            <div className="relative">
+              {/* Placeholder content blocks to simulate blurred text without exposing content */}
+              <div className="space-y-2 select-none" aria-hidden>
+                <div className="h-4 bg-gray-200 rounded w-11/12" />
+                <div className="h-4 bg-gray-200 rounded w-10/12" />
+                <div className="h-4 bg-gray-200 rounded w-9/12" />
+                <div className="h-4 bg-gray-200 rounded w-8/12" />
+              </div>
+              {/* Frosted overlay with CTA */}
+              <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center rounded">
+                <div className="text-center px-4 py-3">
+                  <p className="text-gray-800 font-medium">나머지 리뷰는 제한된 접근입니다</p>
+                  <p className="text-gray-600 text-sm mb-3">리뷰를 작성하면 전체 열람이 가능해요</p>
+                  <div className="flex items-center justify-center gap-2">
+                    {canCreateReviews ? (
+                      <Link href="/write/review">
+                        <Button size="sm">리뷰 작성하기</Button>
+                      </Link>
+                    ) : (
+                      <Link href="/login">
+                        <Button size="sm">로그인하기</Button>
+                      </Link>
+                    )}
+                    {/* Premium CTA removed per request */}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p className="text-gray-700 leading-relaxed">
+                {showFullContent 
+                  ? review.content 
+                  : truncateText(review.content, compact ? 100 : 150)
+                }
+              </p>
+              {!showFullContent && review.content.length > (compact ? 100 : 150) && (
+                <Link href={`/reviews/${review.id}`}>
+                  <Button variant="ghost" size="sm" className="mt-2 p-0 h-auto">
+                    더 보기 →
+                  </Button>
+                </Link>
+              )}
+            </div>
+          )}
 
           {/* Additional Details (only show if full content or approved, and not compact) */}
-          {!compact && (showFullContent || review.status === 'APPROVED') && (
+          {!compact && !blurred && (showFullContent || review.status === 'APPROVED') && (
             <>
               {review.positivePoints && (
                 <div>
@@ -211,7 +245,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
         </div>
 
         {/* Actions */}
-        {showActions && (canEdit || canDeleteReview) && (
+        {showActions && !blurred && (canEdit || canDeleteReview) && (
           <div className="mt-3 pt-3 border-t border-gray-200">
             <div className="flex justify-end space-x-2">
               {canEdit && onEdit && (
@@ -256,6 +290,8 @@ interface ReviewListProps {
   onDelete?: (review: Review) => void;
   emptyMessage?: string;
   className?: string;
+  // If set, items with index >= this value render as blurred placeholders
+  blurAfterIndex?: number;
 }
 
 export const ReviewList: React.FC<ReviewListProps> = ({
@@ -267,6 +303,7 @@ export const ReviewList: React.FC<ReviewListProps> = ({
   onDelete,
   emptyMessage = '리뷰가 없습니다.',
   className = '',
+  blurAfterIndex,
 }) => {
   if (loading) {
     return (
@@ -291,7 +328,7 @@ export const ReviewList: React.FC<ReviewListProps> = ({
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {reviews.map((review) => (
+      {reviews.map((review, idx) => (
         <ReviewCard
           key={review.id}
           review={review}
@@ -299,6 +336,7 @@ export const ReviewList: React.FC<ReviewListProps> = ({
           showFullContent={showFullContent}
           onEdit={onEdit}
           onDelete={onDelete}
+          blurred={typeof blurAfterIndex === 'number' ? idx >= blurAfterIndex : false}
         />
       ))}
     </div>

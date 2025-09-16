@@ -27,6 +27,7 @@ interface ReviewWithDetails extends Review {
 export default function ReviewsPage() {
   const {
     user,
+    isAuthenticated,
     canViewAllReviews,
     maxReviewsVisible,
     shouldShowAds,
@@ -205,10 +206,9 @@ export default function ReviewsPage() {
         console.warn('실제 리뷰 조회 중 오류, 샘플 데이터로 대체:', e);
       }
 
-      // Apply access control limits
-      if (!canViewAllReviews && maxReviewsVisible !== Infinity) {
-        filteredReviews = filteredReviews.slice(0, maxReviewsVisible);
-      }
+      // Note: Do not slice the list for limited users.
+      // We'll render items beyond the first with a blurred overlay to avoid content leakage
+      // while still teasing that more reviews exist.
 
       setReviews(filteredReviews);
       setCurrentPage(1);
@@ -320,6 +320,8 @@ export default function ReviewsPage() {
           reviews={reviews}
           loading={loading}
           emptyMessage="조건에 맞는 리뷰가 없습니다."
+          // For limited-access users, blur all items after the first visible one
+          blurAfterIndex={!canViewAllReviews ? 1 : undefined}
         />
 
         {/* Load More Button */}
@@ -367,7 +369,9 @@ export default function ReviewsPage() {
                       <Button>로그인하기</Button>
                     </Link>
                   )}
-                  <Button variant="outline">프리미엄 업그레이드</Button>
+                  {isAuthenticated && (
+                    <Button variant="outline">프리미엄 업그레이드</Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
