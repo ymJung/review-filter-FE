@@ -90,7 +90,13 @@ export class SummaryService {
                 throw new Error(data.error?.message || 'Failed to fetch summary');
             }
 
-            return data.data;
+            // Normalize date fields coming from JSON
+            const raw = data.data as any;
+            return {
+                ...raw,
+                createdAt: new Date(raw.createdAt),
+                expiresAt: new Date(raw.expiresAt),
+            } as ReviewSummary;
         } catch (error) {
             console.error('Error fetching summary:', error);
             throw error;

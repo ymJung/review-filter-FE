@@ -48,7 +48,8 @@ export async function GET(request: NextRequest) {
         .orderBy('createdAt', 'desc')
         .limit(100); // Get most recent 100 approved reviews
 
-      let reviewsSnapshot: any;
+      // Use proper Firestore types to satisfy strict TypeScript
+      let reviewsSnapshot: FirebaseFirestore.QuerySnapshot<FirebaseFirestore.DocumentData>;
       try {
         reviewsSnapshot = await reviewsQuery.get();
       } catch (e) {
@@ -62,7 +63,14 @@ export async function GET(request: NextRequest) {
       let totalReviews = 0;
 
       // Get all unique course IDs first
-      const courseIds = [...new Set(reviewsSnapshot.docs.map(doc => doc.data().courseId))];
+      const courseIds = [
+        ...new Set(
+          reviewsSnapshot.docs.map(
+            (doc: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>) =>
+              (doc.data() as { courseId?: string }).courseId
+          ).filter((id): id is string => Boolean(id))
+        ),
+      ];
       
       // Batch fetch course data
       const courseData: Record<string, any> = {};
