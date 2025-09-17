@@ -8,6 +8,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface RoadmapCardProps {
   roadmap: Roadmap & {
@@ -20,6 +21,8 @@ interface RoadmapCardProps {
   onEdit?: () => void;
   onDelete?: () => void;
   className?: string;
+  // When true, hide content details and show blurred overlay CTA
+  blurred?: boolean;
 }
 
 export function RoadmapCard({ 
@@ -27,9 +30,11 @@ export function RoadmapCard({
   showActions = false,
   onEdit,
   onDelete,
-  className = '' 
+  className = '',
+  blurred = false,
 }: RoadmapCardProps) {
   const router = useRouter();
+  const { canCreateRoadmaps } = usePermissions();
 
   const formatDate = (date: Date) => {
     return formatDistanceToNow(date, { 
@@ -83,7 +88,7 @@ export function RoadmapCard({
           </div>
         </div>
 
-        {showActions && (
+        {showActions && !blurred && (
           <div className="flex gap-2 ml-4">
             {onEdit && (
               <Button
@@ -109,41 +114,95 @@ export function RoadmapCard({
       </div>
 
       {/* Description */}
-      <p className="text-gray-700 mb-4 line-clamp-2">
-        {roadmap.description}
-      </p>
-
-      {/* Course Information */}
-      <div className="space-y-3">
-        {/* Current Course */}
-        <div className="bg-blue-50 p-3 rounded-lg">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <span className="text-sm font-medium text-blue-700">시작 강의</span>
+      {blurred ? (
+        <div className="relative mb-4">
+          {/* Placeholder blocks instead of real text */}
+          <div className="space-y-2 select-none" aria-hidden>
+            <div className="h-4 bg-gray-200 rounded w-11/12" />
+            <div className="h-4 bg-gray-200 rounded w-10/12" />
           </div>
-          <div className="ml-4">
-            <p className="font-medium text-gray-900">{roadmap.courseTitle}</p>
-            <p className="text-sm text-gray-600">{roadmap.coursePlatform}</p>
+          {/* Overlay CTA */}
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center rounded">
+            <div className="text-center px-4 py-3">
+              <p className="text-gray-800 font-medium">나머지 로드맵은 제한된 접근입니다</p>
+              <p className="text-gray-600 text-sm mb-3">로드맵을 작성하면 전체 열람이 가능해요</p>
+              <div className="flex items-center justify-center gap-2">
+                {canCreateRoadmaps ? (
+                  <Link href="/write/roadmap">
+                    <Button size="sm">로드맵 작성하기</Button>
+                  </Link>
+                ) : (
+                  <Link href="/login">
+                    <Button size="sm">로그인하기</Button>
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
         </div>
+      ) : (
+        <p className="text-gray-700 mb-4 line-clamp-2">
+          {roadmap.description}
+        </p>
+      )}
+
+      {/* Course Information */}
+      <div className={`space-y-3 ${blurred ? 'pointer-events-none select-none' : ''}`}>
+        {/* Current Course */}
+        {blurred ? (
+          <div className="bg-blue-50 p-3 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span className="text-sm font-medium text-blue-700">시작 강의</span>
+            </div>
+            <div className="ml-4 space-y-1" aria-hidden>
+              <div className="h-4 bg-blue-100 rounded w-8/12" />
+              <div className="h-3 bg-blue-100 rounded w-6/12" />
+            </div>
+          </div>
+        ) : (
+          <div className="bg-blue-50 p-3 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span className="text-sm font-medium text-blue-700">시작 강의</span>
+            </div>
+            <div className="ml-4">
+              <p className="font-medium text-gray-900">{roadmap.courseTitle}</p>
+              <p className="text-sm text-gray-600">{roadmap.coursePlatform}</p>
+            </div>
+          </div>
+        )}
 
         {/* Next Course */}
         {roadmap.nextCourses && roadmap.nextCourses.length > 0 && (
-          <div className="bg-green-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-sm font-medium text-green-700">다음 강의</span>
+          blurred ? (
+            <div className="bg-green-50 p-3 rounded-lg">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-sm font-medium text-green-700">다음 강의</span>
+              </div>
+              <div className="ml-4 space-y-1" aria-hidden>
+                <div className="h-4 bg-green-100 rounded w-8/12" />
+                <div className="h-3 bg-green-100 rounded w-6/12" />
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="font-medium text-gray-900">{roadmap.nextCourses[0].title}</p>
-              <p className="text-sm text-gray-600">{roadmap.nextCourses[0].platform}</p>
+          ) : (
+            <div className="bg-green-50 p-3 rounded-lg">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-sm font-medium text-green-700">다음 강의</span>
+              </div>
+              <div className="ml-4">
+                <p className="font-medium text-gray-900">{roadmap.nextCourses[0].title}</p>
+                <p className="text-sm text-gray-600">{roadmap.nextCourses[0].platform}</p>
+              </div>
             </div>
-          </div>
+          )
         )}
       </div>
 
       {/* Category */}
-      {roadmap.category && (
+      {!blurred && roadmap.category && (
         <div className="mt-4 pt-4 border-t border-gray-100">
           <Badge variant="outline" className="text-xs">
             {roadmap.category}
@@ -152,16 +211,18 @@ export function RoadmapCard({
       )}
 
       {/* View Details Link */}
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="w-full"
-          onClick={handleViewDetails}
-        >
-          자세히 보기 →
-        </Button>
-      </div>
+      {!blurred && (
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-full"
+            onClick={handleViewDetails}
+          >
+            자세히 보기 →
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }

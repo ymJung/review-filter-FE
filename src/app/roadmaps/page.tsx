@@ -18,6 +18,7 @@ import Link from 'next/link';
 export default function RoadmapsPage() {
   const { user } = useAuth();
   const {
+    isAuthenticated,
     canViewAllRoadmaps,
     maxRoadmapsVisible,
     shouldShowUpgradePrompts,
@@ -53,11 +54,9 @@ export default function RoadmapsPage() {
     fetchRoadmaps();
   }, [selectedCategory]);
 
-  const displayedRoadmaps = canViewAllRoadmaps 
-    ? roadmaps 
-    : roadmaps.slice(0, maxRoadmapsVisible);
-
-  const hasMoreRoadmaps = roadmaps.length > displayedRoadmaps.length;
+  // Show full list, but blur items after maxRoadmapsVisible for limited users
+  const displayedRoadmaps = roadmaps;
+  const hasMoreRoadmaps = !canViewAllRoadmaps && roadmaps.length > maxRoadmapsVisible;
 
   return (
     <Layout className="bg-gray-50 text-gray-900">
@@ -119,10 +118,11 @@ export default function RoadmapsPage() {
         {/* Roadmaps Grid */}
         {!loading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {displayedRoadmaps.map((roadmap) => (
+            {displayedRoadmaps.map((roadmap, idx) => (
               <RoadmapCard
                 key={roadmap.id}
                 roadmap={roadmap}
+                blurred={!canViewAllRoadmaps ? idx >= maxRoadmapsVisible : false}
               />
             ))}
           </div>
@@ -156,7 +156,9 @@ export default function RoadmapsPage() {
                       <Button>로그인하기</Button>
                     </Link>
                   )}
-                  <Button variant="outline">프리미엄 업그레이드</Button>
+                  {isAuthenticated && (
+                    <Button variant="outline">프리미엄 업그레이드</Button>
+                  )}
                 </div>
             </Card>
           </div>
